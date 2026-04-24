@@ -1,35 +1,38 @@
-\documentclass[11pt]{article}
+\documentclass[times, twoside, watermark]{CellMapFlow-StyleBioRxiv}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\graphicspath{{figures/}}
 
-% --- Packages ---
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{amsmath,amssymb}
-\usepackage{graphicx}
-\usepackage[margin=1in]{geometry}
-\usepackage[hidelinks]{hyperref}
-\usepackage{natbib}
-\usepackage{lineno}
-\usepackage{authblk}
-
-\linenumbers
-
-% --- Title ---
-\title{An End-to-End Workflow for Large-Scale Organelle Segmentation Across Diverse Cell and Tissue Types}
-
-\author[1]{Aubrey Weigel}
-% \author[1]{Coauthor Name} % FILL IN
-\affil[1]{CellMap Project Team, HHMI Janelia Research Campus, Ashburn, VA, USA}
-
-\date{}
+\leadauthor{Weigel}
 
 \begin{document}
 
+\title{An End-to-End Workflow for Large-Scale Organelle Segmentation Across Diverse Cell and Tissue Types}
+\shorttitle{CellMap Flow Workflow}
+
+% Use letters for affiliations, numbers to show equal authorship (if applicable) and to indicate the corresponding author
+\author[1,\href{mailto:weigela@janelia.hhmi.org}{\Letter}]{Aubrey V. Weigel}
+% \author[1]{Coauthor Name} % FILL IN
+
+\affil[1]{CellMap Project Team, Janelia Research Campus, HHMI, 19700 Helix Drive, Ashburn, 20147, VA, USA}
+\affil[ \href{mailto:weigela@janelia.hhmi.org}{\Letter}]{corresponding author}
+
 \maketitle
 
-% --- Abstract ---
+%TC:break Abstract
 \begin{abstract}
 \input{sections/abstract}
 \end{abstract}
+%TC:break main
+
+\begin{keywords}
+% FILL IN: keyword1 | keyword2 | ...
+\end{keywords}
+
+\begin{corrauthor}
+weigela\at janelia.hhmi.org
+\end{corrauthor}
 
 % --- Main Sections ---
 \input{sections/introduction}
@@ -50,7 +53,7 @@
 % FILL IN
 
 % --- References ---
-\bibliographystyle{unsrtnat}
+\bibliographystyle{CellMapFlow-StyleBib}
 \bibliography{references}
 
 \end{document}
