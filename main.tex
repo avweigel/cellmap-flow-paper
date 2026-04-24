@@ -1,0 +1,56 @@
+\documentclass[11pt]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{natbib}
+\usepackage{lineno}
+\usepackage{authblk}
+
+\linenumbers
+
+% --- Title ---
+\title{An End-to-End Workflow for Large-Scale Organelle Segmentation Across Diverse Cell and Tissue Types}
+
+\author[1]{Aubrey Weigel}
+% \author[1]{Coauthor Name} % FILL IN
+\affil[1]{CellMap Project Team, HHMI Janelia Research Campus, Ashburn, VA, USA}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+% --- Abstract ---
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+% --- Main Sections ---
+\input{sections/introduction}
+\input{sections/fibsem}
+\input{sections/annotations}
+\input{sections/ml}
+\input{sections/predictions}
+\input{sections/postprocessing}
+\input{sections/delivery}
+\input{sections/vignettes}
+\input{sections/discussion}
+
+% --- Methods ---
+\input{sections/methods}
+
+% --- Acknowledgements ---
+\section*{Acknowledgements}
+% FILL IN
+
+% --- References ---
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
