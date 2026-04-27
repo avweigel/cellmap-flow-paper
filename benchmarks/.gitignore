@@ -1,0 +1,5 @@
+# Per-run result JSONs are produced fresh each time; check in only the configs.
+*/results/
+*/_configs/
+__pycache__/
+*.pyc

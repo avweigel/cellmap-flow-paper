@@ -1,0 +1,30 @@
+# B6 shared config. Both run_baseline.py and run_cellmapflow.py read this.
+
+# Same model, same input, same chunking — both pipelines must use these.
+data_path: "/path/to/jrc_mus-salivary-1.zarr/recon-1/em/fibsem-uint8/s0"
+model_checkpoint: "/path/to/torchscript_model.pt"
+chunk_shape: [128, 128, 128]
+context: [16, 16, 16]
+output_dtype: "float32"
+
+# Time-to-first-view ROI: small enough to feel "interactive" — approximates
+# what a user sees at scale s2 in Neuroglancer on first opening the dataset.
+first_view_roi_offset: [1024, 1024, 1024]
+first_view_roi_shape:  [256, 256, 256]
+first_view_output_path: "/path/to/out/b6_first_view.zarr"
+
+# Full-volume ROI: a single contiguous sub-volume for completion timing.
+# Sized to finish in tens of minutes on H100 so both pipelines are tractable
+# to repeat. Keep it identical between baseline and cellmap-flow.
+full_volume_roi_offset: [0, 0, 0]
+full_volume_roi_shape:  [4096, 4096, 4096]
+output_path: "/path/to/out/b6_full.zarr"
+
+# cellmap-flow side reads its own YAMLs (not this one). Provide their paths so
+# the harness can dispatch them.
+cellmap_flow_server_yaml:    "configs/cf_server.yaml"
+cellmap_flow_blockwise_yaml: "configs/cf_blockwise.yaml"
+
+# URL path component for the first chunk request, used to detect "first view".
+# Keep this aligned with the dataset name in cf_server.yaml.
+first_chunk_url_path: "jrc_mus-salivary-1.zarr/s0/0.0.0"

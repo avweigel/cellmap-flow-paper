@@ -1,0 +1,40 @@
+# B3 template: blockwise YAML for the strong-scaling sweep.
+# The harness rewrites the `workers` field per run; everything else is held
+# fixed across worker counts.
+
+# Choose a sub-volume large enough that scheduling overhead is amortised at
+# N=1 (so wall time at N=1 is meaningfully larger than zero) but small enough
+# that N=128 finishes in a reasonable wall clock.
+data_path: "/path/to/jrc_mus-liver-3.zarr/recon-1/em/fibsem-uint8/s0"
+
+charge_group: "cellmap"
+queue: "gpu_h100"
+
+json_data:
+  input_norm:
+    MinMaxNormalizer:
+      min_value: 0.0
+      max_value: 255.0
+    LambdaNormalizer:
+      expression: "x*2-1"
+  postprocess:
+    ThresholdPostprocessor:
+      threshold: 0.5
+
+models:
+  - type: "fly"
+    scale: "s0"
+    resolution: 8
+    checkpoint: "/path/to/checkpoint"
+    name: "b3_mito_distance"
+    classes:
+      - "mito"
+
+# Blockwise output target. Use a unique path per run if you do not want
+# downstream invocations to skip blocks already written; otherwise the
+# warm-Zarr behavior would distort timing.
+output_path: "/path/to/out/jrc_mus-liver-3.zarr/b3_strong_scaling/s0"
+task_name: "b3_strong_scaling"
+
+# Replaced by run.py for each N. Keep a sensible default for dry-run inspection.
+workers: 1

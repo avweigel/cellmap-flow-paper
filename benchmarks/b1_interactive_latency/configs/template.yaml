@@ -1,0 +1,32 @@
+# B1 server-side template. Copy and edit for each (model, GPU) cell of the sweep.
+# Pair with `cellmap_flow_yaml <this-file>` to start the server, then point
+# `run.py --server http://localhost:<port>` at it.
+
+# Path to a multiscale Zarr or N5 input. For benchmarks, prefer local SSD to
+# eliminate I/O variance from network/cloud fetches; B8 covers backend variance
+# separately.
+data_path: "/path/to/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s0"
+
+# Optional cluster bookkeeping; not used in pure server mode but kept for
+# parity with production configs.
+charge_group: "cellmap"
+queue: "gpu_h100"
+
+json_data:
+  input_norm:
+    MinMaxNormalizer:
+      min_value: 0.0
+      max_value: 255.0
+  postprocess:
+    DefaultPostprocessor: {}
+
+# Model under test. Swap the checkpoint to vary model size in the sweep
+# (small ~1M params, medium ~10M, large ~50M).
+models:
+  - type: "fly"
+    scale: "s0"
+    resolution: 8
+    checkpoint: "/path/to/checkpoint"
+    name: "b1_unet_medium"
+    classes:
+      - "mito"
