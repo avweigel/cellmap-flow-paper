@@ -1,4 +1,30 @@
-\section*{Postprocessing}
+\section*{Post-processing and Multi-Model Fusion}
 \label{sec:postprocessing}
 
-% FILL IN
+Raw model outputs are rarely the artefact a biologist wants. A semantic segmentation network outputs per-voxel probabilities; a downstream user wants instance labels. An affinity network outputs edge probabilities; the user wants a watershed segmentation. \cellmapflow{} treats post-processing as a pluggable list of operations applied per chunk after inference and before the result is returned to the client (interactive mode) or written to the output Zarr (blockwise mode).
+
+\subsection*{Built-in post-processors}
+
+The framework ships several post-processors covering common cases:
+
+\begin{itemize}
+\item \texttt{DefaultPostprocessor}: identity passthrough; returns raw model outputs.
+\item \texttt{ThresholdPostprocessor}: per-channel thresholding to a binary mask.
+\item \texttt{LabelPostprocessor}: connected-component labelling with optional small-component removal via \texttt{fastmorph}.
+\item \texttt{MortonSegmentationRelabeling}: relabels instance segmentations using Morton (Z-order) codes, which yields stable labels across chunked outputs without requiring a global relabelling pass.
+\item \texttt{AffinityPostprocessor}: mutex-watershed instance segmentation \cite{Wolf2018} using \texttt{mwatershed}, taking affinity outputs and producing 3D instance labels per chunk.
+\end{itemize}
+
+Custom post-processors can be registered as Python entry points; the documentation under \texttt{docs/source/} describes the plugin interface. Because post-processing runs per chunk, operations that require a global view of the volume (e.g.\ globally consistent instance IDs across the whole dataset) require either a chunk-stable encoding such as Morton labelling or a separate global merging pass after blockwise inference.
+
+\subsection*{Multi-model fusion}
+
+\cellmapflow{} supports running multiple models in a single pipeline and fusing their outputs at inference time. Three merge modes are provided: \texttt{AND} (intersection of binarised outputs), \texttt{OR} (union), and consensus voting across $\geq 2$ of $N$ models. Multi-model pipelines are useful in three scenarios:
+
+\begin{enumerate}
+\item \emph{Model comparison.} Two models targeting the same organelle can be visualised side by side, or fused with \texttt{OR} to see where they disagree.
+\item \emph{Multi-class output.} A pipeline targeting several organelles can route different channels through different models and merge their outputs into a single labelled volume.
+\item \emph{Ensembling.} A consensus mode reduces false positives at the cost of slightly higher per-chunk latency.
+\end{enumerate}
+
+Fusion is computed in the inferencer after each model's individual post-processing step, so per-model post-processing (e.g.\ different thresholds) is preserved. The merge logic is YAML-configurable per pipeline.

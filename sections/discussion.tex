@@ -1,4 +1,35 @@
 \section*{Discussion}
 \label{sec:discussion}
 
-% FILL IN
+\cellmapflow{} occupies a niche that has been filled by ad-hoc scripts at most labs working with multi-terabyte volumetric microscopy: a thin layer that connects a trained model to a chunked, browser-native viewer, and that scales the same configuration up to a cluster for full-volume export. We believe the value is less in any single component than in the combination: virtual Zarr serving \emph{plus} cluster-aware blockwise execution \emph{plus} a unified configuration format \emph{plus} adapters for the model formats that researchers actually use. Each of these alone exists elsewhere; their composition does not.
+
+\subsection*{Limitations}
+
+The current design has several limitations worth flagging.
+
+\paragraph{Single-process server.} The Flask-based server is single-process by default and saturates one GPU. Multi-user, multi-tenant deployments require external orchestration (one server per user, or a frontend load balancer). A future direction is to support process pools and shared model caches.
+
+\paragraph{Chunk-local post-processing.} Operations that require a global view of the volume (globally consistent instance IDs, large-component filtering) cannot be expressed as chunk-local post-processors. \cellmapflow{} addresses the most common case (instance segmentation) with Morton-order labelling and otherwise relegates global passes to a separate post-blockwise step.
+
+\paragraph{LSF-specific cluster integration.} Cluster execution is currently wired to LSF. Porting to SLURM, Kubernetes, or a generic Dask backend is straightforward (Daisy supports several executors) but not yet exercised in production.
+
+\paragraph{Model-format coverage.} Adapters exist for the model formats common at our institution. Some popular formats (TensorRT engines, OpenVINO) are not yet supported.
+
+\paragraph{No native model-versioning provenance.} Reproducing a prediction requires tracking the model checkpoint, the YAML, and the input dataset version separately. A future extension could embed checkpoint hashes and dataset versions in the output Zarr's metadata.
+
+\subsection*{Position in the ecosystem}
+
+\cellmapflow{} is complementary to, not a replacement for, several existing projects.
+
+\begin{itemize}
+\item \emph{DaCapo} \cite{Patton2024} provides the training side; \cellmapflow{} consumes its outputs.
+\item \emph{BioImage.io} \cite{BioImageIO} standardises model packaging; \cellmapflow{} loads BioImage.io packages and adds chunked viewer integration.
+\item \emph{Daisy} \cite{DaisyFunke} provides the block scheduler; \cellmapflow{} is one of several pipelines built on it.
+\item \emph{Neuroglancer} \cite{Neuroglancer} provides the viewer; \cellmapflow{} provides a backend that Neuroglancer can address as a Zarr source.
+\end{itemize}
+
+The design choice to expose predictions through Zarr (rather than a custom protocol) is deliberate: any tool that can read Zarr can read \cellmapflow{} output, so our server-mode predictions are not locked into Neuroglancer.
+
+\subsection*{Future directions}
+
+Beyond addressing the limitations above, we see three directions for future work. First, model-versioning provenance baked into output metadata, so predictions are self-describing. Second, autoscaling worker pools that respond to viewer load, eliminating the need to size the cluster manually. Third, support for sparse evaluation regions defined by mesh or polyline annotations, which would let users target inference at regions of biological interest without first segmenting the whole volume.

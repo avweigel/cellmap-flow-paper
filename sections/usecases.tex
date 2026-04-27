@@ -1,0 +1,16 @@
+\section*{Use Cases}
+\label{sec:usecases}
+
+We illustrate the value of \cellmapflow{} with three workflows drawn from production use within the CellMap project. All three exercise the same execution engine through different YAML configurations.
+
+\subsection*{Use Case 1: Interactive exploration of a multi-terabyte volume}
+
+A researcher wants to inspect predicted mitochondria in \texttt{jrc\_mus-liver-3} (\textasciitilde\todo{X~TB}) without running full-volume inference up front. They write a YAML pipeline (\texttt{example/sal\_1\_mito.yaml} in the repository serves as a template), launch \texttt{cellmap\_flow\_yaml mito.yaml}, and copy the printed Neuroglancer URL into a browser. As they pan and zoom, only the chunks on screen are computed; predictions appear within seconds at low magnification and within a few seconds per chunk at full resolution. No disk write is required, no separate Neuroglancer dataset is registered, and the exploration session is reproducible from the YAML alone. \todo{add Fig.~\ref{fig:usecase\_interactive}: screenshot of Neuroglancer view, with a timing inset showing chunk-arrival latency.}
+
+\subsection*{Use Case 2: Whole-volume export with cluster scale-out}
+
+After interactive exploration confirms the model is performing reasonably, the researcher wants to export full-volume predictions for downstream quantitative analysis. The same YAML, executed via \texttt{cellmap\_flow\_blockwise mito.yaml}, dispatches Daisy-managed GPU workers as LSF jobs and writes the result to an output Zarr at the configured path. Failed blocks retry automatically; progress is visible in the dashboard. The total runtime scales with the number of workers (Section~\ref{sec:benchmarks}). The exported Zarr is itself viewable in Neuroglancer through the standard precomputed adapter, no longer dependent on the live \cellmapflow{} server.
+
+\subsection*{Use Case 3: Side-by-side model comparison}
+
+A model developer is iterating on a mitochondrial segmentation model and wants to compare a new candidate against an existing baseline on identical regions. A multi-model YAML configuration loads both models, applies appropriate normalisation per model, and either visualises them on separate Neuroglancer layers or fuses them into a difference map using the \texttt{AND}/\texttt{OR} merge modes (Section~\ref{sec:postprocessing}). The whole comparison happens in the same browser session, with the same data path, eliminating the offline-export round-trip that historically dominated this kind of qualitative evaluation. This pattern is particularly useful while a model is still training in DaCapo: \cellmapflow{}'s \texttt{DaCapoModelConfig} adapter loads a checkpoint from an in-progress run, so a developer can preview predictions before training completes.

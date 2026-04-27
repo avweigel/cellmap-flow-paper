@@ -1,0 +1,116 @@
+\section*{Benchmarks}
+\label{sec:benchmarks}
+
+A software paper for an inference framework needs evidence that the framework is fast enough to be useful and that its scaling behaviour is well-characterised. We propose a benchmark suite covering interactive latency, blockwise throughput, cluster scaling, memory efficiency, comparison against a hand-rolled baseline, and the cost of optional features (multi-model fusion, half-precision, alternative I/O backends). The full set is summarised in Table~\ref{tab:benchmarks}; the rest of this section describes each benchmark in enough detail to be reproducible.
+
+\begin{table*}[tbhp]
+\centering
+\caption{Proposed benchmark suite for \cellmapflow{}. ``Status'' marks which experiments are completed for this manuscript; remaining entries are described as protocols.}
+\label{tab:benchmarks}
+\small
+\begin{tabularx}{\textwidth}{l X l l}
+\toprule
+\textbf{ID} & \textbf{Question} & \textbf{Primary metric} & \textbf{Status} \\
+\midrule
+B1 & Interactive chunk latency vs.\ chunk size and model & ms / chunk (median, p99) & TODO \\
+B2 & Blockwise throughput on a single GPU & GVox/s & TODO \\
+B3 & Strong scaling on cluster (fixed volume, varying GPUs) & speedup vs.\ ideal & TODO \\
+B4 & Weak scaling on cluster (fixed work per GPU) & efficiency & TODO \\
+B5 & Memory footprint vs.\ chunk size (with/without FP16) & peak GPU/CPU MB & TODO \\
+B6 & Comparison vs.\ hand-rolled PyTorch + offline export & end-to-end wall time & TODO \\
+B7 & Multi-model fusion overhead (1 vs.\ 2 vs.\ 3 models) & relative latency & TODO \\
+B8 & I/O backend comparison (Zarr / N5 / OME-Zarr / S3 / precomputed) & read latency & TODO \\
+B9 & Model-format adapter cost (TorchScript / DaCapo / BioImage.io / HuggingFace) & load + first-chunk time & TODO \\
+B10 & Long-running stability (24~h server, real workload) & failure rate, drift & TODO \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\subsection*{B1: Interactive chunk latency}
+
+\paragraph{Question.} How quickly does \cellmapflow{} return a chunk in server mode, as a function of chunk size and model size? This is the single most user-visible metric: it determines whether scrolling through a Neuroglancer view feels instantaneous or laggy.
+
+\paragraph{Protocol.} Use one OpenOrganelle dataset (e.g.\ \texttt{jrc\_hela-2}) on local SSD-backed Zarr to remove I/O variance. Sweep chunk sizes $\{64^3, 128^3, 256^3\}$ voxels and three model sizes (small UNet $\sim$1M params, medium $\sim$10M, large $\sim$50M). For each (chunk, model) pair, request 200 chunks at random spatial offsets through the HTTP server, after a 20-chunk warm-up. Report median, p95, and p99 wall-clock time per chunk. Repeat on H100, A100, V100, and CPU-only. Report cold-cache and warm-cache numbers separately.
+
+\paragraph{Expected outcome.} A regime map showing where \cellmapflow{} is interactive (chunk latency $<$ 1~s, ideally $<$ 200~ms) and where it is not. We expect the smallest practical chunk size on H100 with a $\sim$10M-param UNet to be in the low hundreds of milliseconds.
+
+\subsection*{B2: Blockwise throughput on a single GPU}
+
+\paragraph{Question.} How many output voxels per second does \cellmapflow{} produce in blockwise mode on a single GPU?
+
+\paragraph{Protocol.} Run \texttt{cellmap\_flow\_blockwise} on a fixed-size sub-volume (e.g.\ $4096^3$~voxels) with one worker on H100. Vary chunk size and FP16 on/off. Report sustained GVox/s, GPU utilisation, and time spent in I/O versus compute (instrument the inferencer's load/forward/postprocess phases).
+
+\paragraph{Expected outcome.} A baseline against which multi-GPU runs are compared in B3/B4. Useful side product: a recommendation for default chunk size as a function of model and hardware.
+
+\subsection*{B3: Strong scaling on cluster}
+
+\paragraph{Question.} For a fixed-size volume, how does total wall time scale with the number of GPU workers?
+
+\paragraph{Protocol.} Choose a single full-volume target (e.g.\ \texttt{jrc\_mus-liver-3} or a similarly large OpenOrganelle dataset) and a single model. Run \texttt{cellmap\_flow\_blockwise} with worker counts $N \in \{1, 4, 16, 64, 128\}$ on the LSF cluster. Hold all other parameters fixed. Report wall time, speedup relative to $N=1$, parallel efficiency, and number of Daisy retries. Plot the scaling curve and fit Amdahl's-law parameters.
+
+\paragraph{Expected outcome.} An empirical estimate of the framework's serial overhead (Daisy scheduling, file-system contention) and the practical maximum useful worker count for a given dataset size.
+
+\subsection*{B4: Weak scaling on cluster}
+
+\paragraph{Question.} If the work per GPU is held constant, does adding GPUs maintain the same wall time?
+
+\paragraph{Protocol.} Hold per-GPU work fixed at, e.g., $1024^3$ voxels per worker. Run with $N \in \{1, 4, 16, 64\}$ workers, each processing a disjoint sub-volume of the dataset. Report wall time per worker, parallel efficiency, and any tail-latency degradation.
+
+\paragraph{Expected outcome.} Identifies whether scheduling, file-system, or network bottlenecks degrade performance as the worker pool grows, separately from inherent serial fraction.
+
+\subsection*{B5: Memory footprint}
+
+\paragraph{Question.} What are peak GPU and CPU memory consumption as a function of chunk size and FP16 use?
+
+\paragraph{Protocol.} Profile a single worker over a representative pipeline. Sweep chunk size $\{64^3, 128^3, 192^3, 256^3\}$ and FP16 on/off. Capture peak \texttt{torch.cuda.max\_memory\_allocated}, peak resident-set size (RSS), and any out-of-memory failures.
+
+\paragraph{Expected outcome.} A practical guide for users picking chunk size on a given GPU. FP16 should approximately halve GPU memory and modestly reduce latency; the experiment quantifies the trade-off.
+
+\subsection*{B6: Comparison against a hand-rolled baseline}
+
+\paragraph{Question.} What does \cellmapflow{} actually save a user compared with the workflow it replaces?
+
+\paragraph{Protocol.} Define a representative task: ``produce viewable predictions for organelle X across dataset Y.'' Implement two pipelines:
+\begin{itemize}
+\item \emph{Baseline.} A hand-written PyTorch script that loops over chunks, runs inference, writes output to Zarr, then registers the result with Neuroglancer's precomputed adapter.
+\item \emph{\cellmapflow{}.} The same model + dataset configured via YAML, server mode for the first qualitative look, blockwise mode for full-volume export.
+\end{itemize}
+Measure two end-to-end metrics: (a) \emph{time to first interactive view} (from cold start to the user seeing the first prediction); (b) \emph{time to whole-volume completion}. Track lines of code as a secondary metric.
+
+\paragraph{Expected outcome.} \cellmapflow{} should win decisively on time-to-first-view (no offline write step) and be competitive on time-to-completion (the same chunked-inference code paths are exercised). A measurable line-of-code reduction quantifies the maintenance benefit.
+
+\subsection*{B7: Multi-model fusion overhead}
+
+\paragraph{Question.} How much does adding a second or third model to an inference pipeline cost?
+
+\paragraph{Protocol.} Run B1 with one, two, and three models loaded simultaneously, fused with each merge mode (\texttt{AND}, \texttt{OR}, consensus). Measure incremental latency per added model and peak GPU memory.
+
+\paragraph{Expected outcome.} A user-facing rule of thumb: ``adding model $k$ costs approximately $X\%$ more latency.''
+
+\subsection*{B8: I/O backend comparison}
+
+\paragraph{Question.} How does input-data backend affect read latency?
+
+\paragraph{Protocol.} Mirror the same dataset to local Zarr, local N5, local OME-Zarr, S3-hosted Zarr (cold and warmed CDN), and Google Cloud precomputed. Sweep B1's chunk-request workload over each backend. Report read latency only (skip inference, or subtract inference time using B1 numbers).
+
+\paragraph{Expected outcome.} Quantifies the cloud-vs.-local penalty and validates the TensorStore abstraction. Will inform recommended deployment patterns.
+
+\subsection*{B9: Model-format adapter cost}
+
+\paragraph{Question.} Do the various supported model formats incur different load and first-inference times?
+
+\paragraph{Protocol.} For one logical model, package it as TorchScript, DaCapo, BioImage.io, and HuggingFace Hub variants. Measure cold-start load time and first-chunk inference time per format. Subsequent-chunk latency should be format-independent; verify.
+
+\paragraph{Expected outcome.} A guide to format choice when trade-offs matter (e.g.\ TorchScript for shortest cold start, BioImage.io for portability).
+
+\subsection*{B10: Long-running stability}
+
+\paragraph{Question.} Does the server hold up under realistic continuous use?
+
+\paragraph{Protocol.} Run a server for 24~hours under a synthetic Neuroglancer-like workload (chunk requests at 1--10~Hz, varied spatial pattern). Track failure events, GPU memory growth, response-time drift, and cache effectiveness. Repeat in blockwise mode for a multi-hour batch run.
+
+\paragraph{Expected outcome.} Quantitative evidence of production readiness, or a list of stability bugs to fix before publication.
+
+\subsection*{Reporting and reproducibility}
+
+All benchmarks will be implemented as scripts in a \texttt{benchmarks/} directory of the cellmap-flow repository, with version pins for the framework, models, and datasets. Per-experiment YAML configs will be checked in alongside results so that any third party can reproduce the table. Hardware (GPU model, interconnect, file-system class) will be reported with each result.

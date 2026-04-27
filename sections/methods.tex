@@ -1,4 +1,34 @@
-\section*{Methods}
+\section*{Methods and Availability}
 \label{sec:methods}
 
-% FILL IN
+\subsection*{Software availability}
+
+\cellmapflow{} is released under a BSD-3-Clause license at \url{https://github.com/janelia-cellmap/cellmap-flow}. Installable releases are published to PyPI as \texttt{cellmap-flow}. The version reported in this manuscript is \todo{0.2.X}; the experiments in Section~\ref{sec:benchmarks} pin a single commit, recorded in the per-experiment configuration files.
+
+\subsection*{Dependencies}
+
+Core dependencies are PyTorch (model execution), NumPy, Zarr 2.18, TensorStore (multi-format I/O), Flask and Gunicorn (HTTP server), Daisy (block scheduling), funlib.geometry / funlib.persistence (ROI and array abstractions), and Neuroglancer (viewer integration). Image-processing utilities use scikit-image, mwatershed, fastmorph, fastremap, and edt. Optional extras pull in DaCapo (\texttt{dacapo-ml[dacapo]}), BioImage.io (\texttt{bioimageio.core[onnx,pytorch]==0.7.0}), HuggingFace Hub, and Cellpose. Full pinned versions are listed in \texttt{pyproject.toml} of the released distribution.
+
+\subsection*{Configuration format}
+
+Pipeline configuration is YAML. A minimal pipeline declares an input dataset, a model configuration block (with format-specific fields), an optional list of input normalisers, an optional list of output post-processors, and an output specification (for blockwise mode). Several reference configurations are checked into \texttt{example/} in the repository (e.g.\ \texttt{example\_pipeline.yaml}, \texttt{sal\_1\_mito.yaml}, \texttt{multiple\_yaml.yaml}). The full schema is documented under \texttt{docs/source/yaml\_config.rst}.
+
+\subsection*{Hardware}
+
+Benchmarks reported in Section~\ref{sec:benchmarks} were run on Janelia's compute infrastructure: NVIDIA H100 GPUs (and A100/V100 for cross-hardware comparison) on LSF-managed nodes, with datasets stored on Janelia's primary network file system, on local NVMe SSD where noted, and on AWS S3 (\texttt{us-east-1}) and Google Cloud Storage for cloud-backend experiments. Job submission used the default queue \texttt{gpu\_h100} with site-specific charge groups configured per site.
+
+\subsection*{Datasets}
+
+Benchmark datasets are drawn from the publicly available OpenOrganelle FIB-SEM collection \cite{Xu2021}. Specific datasets are named in each benchmark protocol and are accessible from \openorganelle{} without registration. No new data was collected for this manuscript; all biological datasets are pre-existing and released under their respective licenses.
+
+\subsection*{Reproducibility}
+
+Each benchmark in Section~\ref{sec:benchmarks} ships with a self-contained YAML configuration, a runner script, and a results-reporting notebook in the \texttt{benchmarks/} directory of the cellmap-flow repository. Results tables in this manuscript are regenerated from those scripts; the regeneration script is \texttt{benchmarks/regenerate\_paper\_tables.py}.
+
+\subsection*{Author contributions}
+
+% FILL IN once authorship is finalised. Suggested format follows CRediT taxonomy.
+
+\subsection*{Conflicts of interest}
+
+The authors declare no conflicts of interest.
