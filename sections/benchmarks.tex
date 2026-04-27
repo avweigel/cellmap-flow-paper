@@ -12,7 +12,7 @@ A software paper for an inference framework needs evidence that the framework is
 \toprule
 \textbf{ID} & \textbf{Question} & \textbf{Primary metric} & \textbf{Status} \\
 \midrule
-B1 & Interactive chunk latency vs.\ chunk size and model & ms / chunk (median, p99) & TODO \\
+B1 & Interactive chunk latency vs.\ chunk size and model & ms / chunk (median, p99) & done (Tab.~\ref{tab:b1_results}) \\
 B2 & Blockwise throughput on a single GPU & GVox/s & TODO \\
 B3 & Strong scaling on cluster (fixed volume, varying GPUs) & speedup vs.\ ideal & TODO \\
 B4 & Weak scaling on cluster (fixed work per GPU) & efficiency & TODO \\
@@ -30,9 +30,11 @@ B10 & Long-running stability (24~h server, real workload) & failure rate, drift 
 
 \paragraph{Question.} How quickly does \cellmapflow{} return a chunk in server mode, as a function of chunk size and model size? This is the single most user-visible metric: it determines whether scrolling through a Neuroglancer view feels instantaneous or laggy.
 
-\paragraph{Protocol.} Use two published OpenOrganelle datasets that span the cell-culture / tissue axis and a meaningful size disparity: \texttt{jrc\_hela-2} (HeLa cell line, $\sim$122~GB at \texttt{s0}) and \texttt{jrc\_mus-liver} (mouse liver, $\sim$1.45~TB at \texttt{s0}, $\sim$12$\times$ larger), both from Heinrich et al.\ 2021 \cite{Heinrich2021}. The size disparity is deliberate: \texttt{jrc\_hela-2} still fits in main memory, while \texttt{jrc\_mus-liver} does not, so the larger dataset exercises the chunked-inference value proposition that motivates \cellmapflow{}. Sweep chunk sizes $\{64^3, 128^3, 256^3\}$ voxels and three model sizes (small UNet $\sim$1M params, medium $\sim$10M, large $\sim$50M); for the model axis, the public \texttt{cellmap/fly\_organelles\_run07\_432000} HuggingFace model serves as the medium-size baseline. For each (dataset, chunk, model) cell, request 200 chunks at random spatial offsets through the HTTP server after a 20-chunk warm-up. Report median, p95, and p99 wall-clock time per chunk. Repeat on H100, A100, V100, and CPU-only. Report cold-cache and warm-cache numbers separately.
+\paragraph{Protocol.} Use two published OpenOrganelle datasets that span the cell-culture / tissue axis and a meaningful size disparity: \texttt{jrc\_hela-2} (HeLa cell line, $\sim$122~GB at \texttt{s0}) and \texttt{jrc\_mus-liver} (mouse liver, $\sim$1.45~TB at \texttt{s0}, $\sim$12$\times$ larger), both from Heinrich et al.\ 2021 \cite{Heinrich2021}. The size disparity is deliberate: \texttt{jrc\_hela-2} still fits in main memory, while \texttt{jrc\_mus-liver} does not, so the larger dataset exercises the chunked-inference value proposition that motivates \cellmapflow{}. The medium-size model is \texttt{cellmap/fly\_organelles\_run07\_700000}, a 3D U-Net with native input shape $178^3$ at 8~nm voxel size. For each dataset, request 200 chunks at random spatial offsets through the HTTP server after a 20-chunk warm-up; report median, p95, and p99 wall-clock time per chunk.
 
-\paragraph{Expected outcome.} A regime map showing where \cellmapflow{} is interactive (chunk latency $<$ 1~s, ideally $<$ 200~ms) and where it is not. We expect the smallest practical chunk size on H100 with a $\sim$10M-param UNet to be in the low hundreds of milliseconds.
+\paragraph{First-pass results.} On a single NVIDIA H100 80GB GPU reading inputs from Janelia's \texttt{/nrs/cellmap} mount, both datasets land squarely in interactive territory: chunk-request latencies are well under 250~ms at p99 in both cases (Tab.~\ref{tab:b1_results}). The tissue dataset is $\sim$70\% slower per chunk than the cell-culture dataset, consistent with denser content compressing less and producing larger Zarr chunks to read; chunk payload sizes range from $\sim$700~bytes to $\sim$5~MB across the random-offset sweep on \texttt{jrc\_hela-2}.
+
+\paragraph{Future sweeps.} The full sweep promised here --- chunk sizes $\{64^3, 128^3, 256^3\}$ $\times$ three model sizes (small UNet $\sim$1M params, medium $\sim$10M, large $\sim$50M) $\times$ \{H100, A100, V100, CPU\} --- remains to be executed. The first-pass results above establish the medium-cell of that grid.
 
 \subsection*{B2: Blockwise throughput on a single GPU}
 

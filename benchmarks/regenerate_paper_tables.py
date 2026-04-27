@@ -14,6 +14,11 @@ from pathlib import Path
 from benchmarks._common.reporting import load_results
 
 
+def _esc(s) -> str:
+    """Escape underscores for LaTeX text mode."""
+    return str(s).replace("_", r"\_")
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
@@ -46,7 +51,7 @@ def render_b1(rows: list[dict]) -> str:
     for r in sorted(rows, key=lambda r: r.get("label", "")):
         s = r["summary"]
         lines.append(
-            f"{r.get('label', '?')} & {s['count']} & {s['median_ms']:.1f} & "
+            f"{_esc(r.get('label', '?'))} & {s['count']} & {s['median_ms']:.1f} & "
             f"{s['p95_ms']:.1f} & {s['p99_ms']:.1f} \\\\"
         )
     lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}", ""]
