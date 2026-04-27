@@ -1,1 +1,1 @@
-# cellmap-workflow-paper
+# cellmap-flow-paper
