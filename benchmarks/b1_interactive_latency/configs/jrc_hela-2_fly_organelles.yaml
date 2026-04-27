@@ -1,0 +1,19 @@
+# B1 server config: cellmap/fly_organelles_run07_432000 on jrc_hela-2 at s1.
+#
+# Dataset: jrc_hela-2 — published in Heinrich et al., Nature 2021.
+# https://openorganelle.janelia.org/datasets/jrc_hela-2
+# Native voxel size ~4 nm (s0); s1 is downsampled to ~8 nm to match the model.
+#
+# Model: cellmap/fly_organelles_run07_432000 — 3D U-Net trained for 8 nm input,
+# outputs 8 nm predictions for {all_mem, organelle, mito, er, nucleus, pm, vs, ld}.
+# Hosted publicly on HuggingFace; cellmap-flow's HuggingFace adapter downloads
+# it on first use.
+
+data_path: "s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
+charge_group: "cellmap"
+queue: "gpu_h100"
+
+models:
+  fly_organelles:
+    type: huggingface
+    repo: cellmap/fly_organelles_run07_432000
