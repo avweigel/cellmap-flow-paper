@@ -3,6 +3,9 @@
 # Tissue counterpart to jrc_hela-2_fly_organelles.yaml. jrc_mus-liver is mouse
 # liver tissue, published in Heinrich et al., Nature 2021.
 # https://openorganelle.janelia.org/datasets/jrc_mus-liver
+# s0 shape 8932 x 12728 x 12747 (~1.45 TB uint8) — ~12x larger than jrc_hela-2
+# and large enough that the volume does not fit in main memory, exercising
+# the chunked-inference value proposition.
 #
 # Same model as the cell-culture config so per-chunk inference cost is held
 # constant across the dataset axis; latency differences in B1 reflect
