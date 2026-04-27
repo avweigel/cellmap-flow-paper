@@ -1,9 +1,9 @@
-# B3 blockwise config: cellmap/fly_organelles_run07_432000 on jrc_hela-2.
+# B3 blockwise config: cellmap/fly_organelles_run07_700000 on jrc_hela-2.
 # The harness rewrites the `workers` field per run; everything else is held
 # fixed across worker counts.
 #
 # Dataset: jrc_hela-2 (Heinrich et al., Nature 2021), public S3.
-# Model: cellmap/fly_organelles_run07_432000, public HuggingFace.
+# Model: cellmap/fly_organelles_run07_700000, public HuggingFace.
 
 data_path: "s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
 charge_group: "cellmap"
@@ -12,7 +12,7 @@ queue: "gpu_h100"
 models:
   fly_organelles:
     type: huggingface
-    repo: cellmap/fly_organelles_run07_432000
+    repo: cellmap/fly_organelles_run07_700000
 
 # Pick a fresh output path per sweep so previously-written blocks don't get
 # skipped (which would distort wall-time measurements). Replace <user> below.

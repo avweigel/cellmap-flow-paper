@@ -1,4 +1,4 @@
-# B1 server config: cellmap/fly_organelles_run07_432000 on jrc_hela-2 at s1.
+# B1 server config: cellmap/fly_organelles_run07_700000 on jrc_hela-2 at s1.
 #
 # Dataset: jrc_hela-2 — published in Heinrich et al., Nature 2021.
 # https://openorganelle.janelia.org/datasets/jrc_hela-2
@@ -7,7 +7,7 @@
 # paired with jrc_mus-liver (~1.45 TB, mouse liver tissue) for cell-culture-
 # vs-tissue comparison.
 #
-# Model: cellmap/fly_organelles_run07_432000 — 3D U-Net trained for 8 nm input,
+# Model: cellmap/fly_organelles_run07_700000 — 3D U-Net trained for 8 nm input,
 # outputs 8 nm predictions for {all_mem, organelle, mito, er, nucleus, pm, vs, ld}.
 # Hosted publicly on HuggingFace; cellmap-flow's HuggingFace adapter downloads
 # it on first use.
@@ -19,4 +19,4 @@ queue: "gpu_h100"
 models:
   fly_organelles:
     type: huggingface
-    repo: cellmap/fly_organelles_run07_432000
+    repo: cellmap/fly_organelles_run07_700000

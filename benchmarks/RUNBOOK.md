@@ -35,7 +35,7 @@ Two pre-filled configs, both public S3 + public HuggingFace, covering cell-cultu
 - [configs/jrc_hela-2_fly_organelles.yaml](b1_interactive_latency/configs/jrc_hela-2_fly_organelles.yaml) — HeLa cell line (cell culture)
 - [configs/jrc_mus-liver_fly_organelles.yaml](b1_interactive_latency/configs/jrc_mus-liver_fly_organelles.yaml) — mouse liver (tissue)
 
-Both use `cellmap/fly_organelles_run07_432000` so the model is held fixed; latency differences across the two datasets reflect I/O and chunk-content variance, not model variance. Both datasets were published in Heinrich et al., Nature 2021.
+Both use `cellmap/fly_organelles_run07_700000` so the model is held fixed; latency differences across the two datasets reflect I/O and chunk-content variance, not model variance. Both datasets were published in Heinrich et al., Nature 2021.
 
 ### Run
 
@@ -61,7 +61,7 @@ python -m benchmarks.b1_interactive_latency.run \
     --n-warmup 20 \
     --n-measure 200 \
     --output benchmarks/b1_interactive_latency/results/jrc_hela-2_fly_organelles_s1_h100.json \
-    --label "jrc_hela-2 fly_organelles_run07_432000 s1 H100"
+    --label "jrc_hela-2 fly_organelles_run07_700000 s1 H100"
 
 # tissue
 python -m benchmarks.b1_interactive_latency.run \
@@ -72,7 +72,7 @@ python -m benchmarks.b1_interactive_latency.run \
     --n-warmup 20 \
     --n-measure 200 \
     --output benchmarks/b1_interactive_latency/results/jrc_mus-liver_fly_organelles_s1_h100.json \
-    --label "jrc_mus-liver fly_organelles_run07_432000 s1 H100"
+    --label "jrc_mus-liver fly_organelles_run07_700000 s1 H100"
 ```
 
 ### Sweep
@@ -132,7 +132,7 @@ This benchmark requires **the same model loadable both ways**: as a TorchScript 
 ```python
 from huggingface_hub import hf_hub_download
 ts_path = hf_hub_download(
-    repo_id="cellmap/fly_organelles_run07_432000",
+    repo_id="cellmap/fly_organelles_run07_700000",
     filename="model.ts",  # adjust filename to whatever the repo provides
 )
 print(ts_path)  # use this path in the B6 config
@@ -143,8 +143,8 @@ If `model.ts` isn't shipped, export it once:
 ```python
 from cellmap_models.model_export.cellmap_model import CellmapModel
 import torch
-m = CellmapModel("cellmap/fly_organelles_run07_432000")
-torch.jit.script(m.model).save("/path/to/cellmap_flow_paper/benchmarks/b6_baseline_comparison/fly_organelles_run07_432000.ts")
+m = CellmapModel("cellmap/fly_organelles_run07_700000")
+torch.jit.script(m.model).save("/path/to/cellmap_flow_paper/benchmarks/b6_baseline_comparison/fly_organelles_run07_700000.ts")
 ```
 
 Once you have a TorchScript file:
