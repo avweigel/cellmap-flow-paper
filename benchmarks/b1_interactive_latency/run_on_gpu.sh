@@ -9,7 +9,9 @@
 # Boots cellmap_flow_server in the background, waits for it to respond,
 # runs the B1 client, saves results JSON, kills server.
 
-set -euo pipefail
+set -eo pipefail
+# Note: not using `set -u` because conda.sh references PS1, which is
+# unset in non-interactive shells.
 
 DATA_PATH="${1:?data_path required}"
 HF_REPO="${2:?hf_repo required}"
