@@ -1,0 +1,26 @@
+# B1 server config: mito distance model on jrc_mus-salivary-1 at s1.
+# Mirrors example/sal_1_mito.yaml from the cellmap-flow repo.
+
+data_path: "/nrs/cellmap/data/jrc_mus-salivary-1/jrc_mus-salivary-1.zarr/recon-1/em/fibsem-uint8/s1"
+charge_group: "cellmap"
+queue: "gpu_h100"
+
+json_data:
+  input_norm:
+    MinMaxNormalizer:
+      min_value: 0.0
+      max_value: 255.0
+    LambdaNormalizer:
+      expression: "x*2-1"
+  postprocess:
+    ThresholdPostprocessor:
+      threshold: 0.5
+
+models:
+  - type: "fly"
+    scale: "s1"
+    resolution: 16
+    checkpoint: "/groups/cellmap/cellmap/zouinkhim/salevary/train/v2/distance/mito_16_all/model_checkpoint_20000"
+    name: "mito_distance_16"
+    classes:
+      - "mito"
