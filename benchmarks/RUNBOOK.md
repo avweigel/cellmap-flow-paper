@@ -30,24 +30,29 @@ Expect `SMOKE OK` with median ≈ injected delay (25 ms). Run this once after an
 
 ## B1 — Interactive chunk-request latency
 
-Pre-filled config: [configs/jrc_hela-2_fly_organelles.yaml](b1_interactive_latency/configs/jrc_hela-2_fly_organelles.yaml). Uses **public** data and a **public** HuggingFace model so the benchmark reproduces outside Janelia:
+Two pre-filled configs, both public S3 + public HuggingFace, covering cell-culture vs tissue:
 
-- Data: `s3://janelia-cosem-datasets/jrc_hela-2/...` (Heinrich et al., Nature 2021)
-- Model: `cellmap/fly_organelles_run07_432000`
+- [configs/jrc_hela-2_fly_organelles.yaml](b1_interactive_latency/configs/jrc_hela-2_fly_organelles.yaml) — HeLa cell line (cell culture)
+- [configs/jrc_mus-liver_fly_organelles.yaml](b1_interactive_latency/configs/jrc_mus-liver_fly_organelles.yaml) — mouse liver (tissue)
+
+Both use `cellmap/fly_organelles_run07_432000` so the model is held fixed; latency differences across the two datasets reflect I/O and chunk-content variance, not model variance. Both datasets were published in Heinrich et al., Nature 2021.
 
 ### Run
 
-In **terminal A** on a GPU node (e.g., `bsub -Is -q gpu_h100 -gpu "num=1" /bin/bash`):
+Repeat for each dataset. In **terminal A** on a GPU node (e.g., `bsub -Is -q gpu_h100 -gpu "num=1" /bin/bash`):
 
 ```sh
-cellmap_flow_yaml \
-    benchmarks/b1_interactive_latency/configs/jrc_hela-2_fly_organelles.yaml
+# cell culture
+cellmap_flow_yaml benchmarks/b1_interactive_latency/configs/jrc_hela-2_fly_organelles.yaml
+# ... or, for the tissue dataset:
+cellmap_flow_yaml benchmarks/b1_interactive_latency/configs/jrc_mus-liver_fly_organelles.yaml
 # note the host:port the server prints, e.g. http://h09u01.int.janelia.org:8000
 ```
 
 In **terminal B** (anywhere with HTTP access to that host):
 
 ```sh
+# cell culture
 python -m benchmarks.b1_interactive_latency.run \
     --server http://<host>:<port> \
     --dataset jrc_hela-2.zarr \
@@ -57,6 +62,17 @@ python -m benchmarks.b1_interactive_latency.run \
     --n-measure 200 \
     --output benchmarks/b1_interactive_latency/results/jrc_hela-2_fly_organelles_s1_h100.json \
     --label "jrc_hela-2 fly_organelles_run07_432000 s1 H100"
+
+# tissue
+python -m benchmarks.b1_interactive_latency.run \
+    --server http://<host>:<port> \
+    --dataset jrc_mus-liver.zarr \
+    --scale 1 \
+    --chunk-grid 32 32 32 \
+    --n-warmup 20 \
+    --n-measure 200 \
+    --output benchmarks/b1_interactive_latency/results/jrc_mus-liver_fly_organelles_s1_h100.json \
+    --label "jrc_mus-liver fly_organelles_run07_432000 s1 H100"
 ```
 
 ### Sweep
@@ -76,17 +92,27 @@ One JSON per cell of the sweep, distinct filenames so the aggregator picks them 
 
 ## B3 — Cluster strong scaling
 
-Pre-filled config: [configs/jrc_hela-2_fly_organelles.yaml](b3_strong_scaling/configs/jrc_hela-2_fly_organelles.yaml). Same data and model as B1, but blockwise output. **Replace `<user>` in `output_path` and pick a fresh path before each sweep** — re-using a path means previously-written blocks get skipped and timings will be wrong.
+Pre-filled configs (both datasets, blockwise output):
+
+- [configs/jrc_hela-2_fly_organelles.yaml](b3_strong_scaling/configs/jrc_hela-2_fly_organelles.yaml)
+- [configs/jrc_mus-liver_fly_organelles.yaml](b3_strong_scaling/configs/jrc_mus-liver_fly_organelles.yaml)
+
+**Replace `<user>` in `output_path` and pick a fresh path before each sweep** — re-using a path means previously-written blocks get skipped and timings will be wrong.
 
 ### Run
 
-From a host that can submit to LSF:
+From a host that can submit to LSF (run for each dataset):
 
 ```sh
 python -m benchmarks.b3_strong_scaling.run \
     --config benchmarks/b3_strong_scaling/configs/jrc_hela-2_fly_organelles.yaml \
     --workers 1 4 16 64 128 \
     --output-dir benchmarks/b3_strong_scaling/results/jrc_hela-2_fly_organelles/
+
+python -m benchmarks.b3_strong_scaling.run \
+    --config benchmarks/b3_strong_scaling/configs/jrc_mus-liver_fly_organelles.yaml \
+    --workers 1 4 16 64 128 \
+    --output-dir benchmarks/b3_strong_scaling/results/jrc_mus-liver_fly_organelles/
 ```
 
 The harness rewrites the YAML's `workers` field per run, dispatches `cellmap_flow_blockwise`, captures wall time, and writes one JSON per N to the output directory.

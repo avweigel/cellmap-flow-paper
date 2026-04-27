@@ -1,0 +1,18 @@
+# B1 server config: cellmap/fly_organelles_run07_432000 on jrc_mus-liver at s1.
+#
+# Tissue counterpart to jrc_hela-2_fly_organelles.yaml. jrc_mus-liver is mouse
+# liver tissue, published in Heinrich et al., Nature 2021.
+# https://openorganelle.janelia.org/datasets/jrc_mus-liver
+#
+# Same model as the cell-culture config so per-chunk inference cost is held
+# constant across the dataset axis; latency differences in B1 reflect
+# I/O / chunk-content variance rather than model variance.
+
+data_path: "s3://janelia-cosem-datasets/jrc_mus-liver/jrc_mus-liver.zarr/recon-1/em/fibsem-uint8/s1"
+charge_group: "cellmap"
+queue: "gpu_h100"
+
+models:
+  fly_organelles:
+    type: huggingface
+    repo: cellmap/fly_organelles_run07_432000

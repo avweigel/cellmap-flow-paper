@@ -1,0 +1,24 @@
+# B3 blockwise config: cellmap/fly_organelles_run07_432000 on jrc_mus-liver.
+# The harness rewrites the `workers` field per run; everything else is held
+# fixed across worker counts.
+#
+# Tissue counterpart to jrc_hela-2_fly_organelles.yaml.
+# Dataset: jrc_mus-liver (Heinrich et al., Nature 2021), public S3.
+# Model: cellmap/fly_organelles_run07_432000, public HuggingFace.
+
+data_path: "s3://janelia-cosem-datasets/jrc_mus-liver/jrc_mus-liver.zarr/recon-1/em/fibsem-uint8/s1"
+charge_group: "cellmap"
+queue: "gpu_h100"
+
+models:
+  fly_organelles:
+    type: huggingface
+    repo: cellmap/fly_organelles_run07_432000
+
+# Pick a fresh writable output path per sweep so previously-written blocks
+# don't get skipped (which would distort wall-time measurements).
+output_path: "/nrs/cellmap/<user>/benchmarks/b3_strong_scaling/jrc_mus-liver_fly_organelles.zarr/s1"
+task_name: "b3_strong_scaling_jrc_mus-liver_fly_organelles"
+
+# Replaced by run.py per N. Default kept for dry-run inspection.
+workers: 1

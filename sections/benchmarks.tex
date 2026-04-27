@@ -30,7 +30,7 @@ B10 & Long-running stability (24~h server, real workload) & failure rate, drift 
 
 \paragraph{Question.} How quickly does \cellmapflow{} return a chunk in server mode, as a function of chunk size and model size? This is the single most user-visible metric: it determines whether scrolling through a Neuroglancer view feels instantaneous or laggy.
 
-\paragraph{Protocol.} Use one OpenOrganelle dataset (e.g.\ \texttt{jrc\_hela-2}) on local SSD-backed Zarr to remove I/O variance. Sweep chunk sizes $\{64^3, 128^3, 256^3\}$ voxels and three model sizes (small UNet $\sim$1M params, medium $\sim$10M, large $\sim$50M). For each (chunk, model) pair, request 200 chunks at random spatial offsets through the HTTP server, after a 20-chunk warm-up. Report median, p95, and p99 wall-clock time per chunk. Repeat on H100, A100, V100, and CPU-only. Report cold-cache and warm-cache numbers separately.
+\paragraph{Protocol.} Use two published OpenOrganelle datasets that span the cell-culture / tissue axis: \texttt{jrc\_hela-2} (HeLa cell line) and \texttt{jrc\_mus-liver} (mouse liver), both from Heinrich et al.\ 2021 \cite{Heinrich2021}. Sweep chunk sizes $\{64^3, 128^3, 256^3\}$ voxels and three model sizes (small UNet $\sim$1M params, medium $\sim$10M, large $\sim$50M); for the model axis, the public \texttt{cellmap/fly\_organelles\_run07\_432000} HuggingFace model serves as the medium-size baseline. For each (dataset, chunk, model) cell, request 200 chunks at random spatial offsets through the HTTP server after a 20-chunk warm-up. Report median, p95, and p99 wall-clock time per chunk. Repeat on H100, A100, V100, and CPU-only. Report cold-cache and warm-cache numbers separately.
 
 \paragraph{Expected outcome.} A regime map showing where \cellmapflow{} is interactive (chunk latency $<$ 1~s, ideally $<$ 200~ms) and where it is not. We expect the smallest practical chunk size on H100 with a $\sim$10M-param UNet to be in the low hundreds of milliseconds.
 
@@ -46,7 +46,7 @@ B10 & Long-running stability (24~h server, real workload) & failure rate, drift 
 
 \paragraph{Question.} For a fixed-size volume, how does total wall time scale with the number of GPU workers?
 
-\paragraph{Protocol.} Choose a single full-volume target (e.g.\ \texttt{jrc\_hela-2} or a similarly large published OpenOrganelle dataset) and a single model. Run \texttt{cellmap\_flow\_blockwise} with worker counts $N \in \{1, 4, 16, 64, 128\}$ on the LSF cluster. Hold all other parameters fixed. Report wall time, speedup relative to $N=1$, parallel efficiency, and number of Daisy retries. Plot the scaling curve and fit Amdahl's-law parameters.
+\paragraph{Protocol.} Run on both \texttt{jrc\_hela-2} (cell culture) and \texttt{jrc\_mus-liver} (tissue) with the same model. Run \texttt{cellmap\_flow\_blockwise} with worker counts $N \in \{1, 4, 16, 64, 128\}$ on the LSF cluster. Hold all other parameters fixed within each dataset. Report wall time, speedup relative to $N=1$, parallel efficiency, and number of Daisy retries. Plot the scaling curve per dataset and fit Amdahl's-law parameters; comparing the two curves separates dataset-specific effects (chunk-content variance, S3 read patterns) from the framework's intrinsic scaling behaviour.
 
 \paragraph{Expected outcome.} An empirical estimate of the framework's serial overhead (Daisy scheduling, file-system contention) and the practical maximum useful worker count for a given dataset size.
 
