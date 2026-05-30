@@ -61,9 +61,21 @@ def render_b1(rows: list[dict]) -> str:
 def render_b3(rows: list[dict]) -> str:
     if not rows:
         return "% B3: no results yet\n"
+    # A nonzero return code means cellmap_flow_blockwise crashed; its wall time is
+    # whatever it took to fail, not a valid scaling point. Dropping these avoids
+    # fabricating a huge speedup from a fast failure.
+    dropped = [r["n_workers"] for r in rows if r.get("return_code", 0) != 0]
+    rows = [r for r in rows if r.get("return_code", 0) == 0]
+    if not rows:
+        return "% B3: all runs failed (nonzero return_code); no valid scaling points\n"
     rows = sorted(rows, key=lambda r: r["n_workers"])
     base = next((r for r in rows if r["n_workers"] == 1), rows[0])
-    lines = [
+    lines = []
+    if dropped:
+        lines.append(
+            f"% B3: dropped failed worker counts (nonzero return_code): {sorted(dropped)}"
+        )
+    lines += [
         "\\begin{table}[tbhp]",
         "\\centering",
         "\\caption{B3 cluster strong scaling. Wall time and speedup vs.\\ ideal at each worker count.}",
@@ -87,11 +99,23 @@ def render_b3(rows: list[dict]) -> str:
 def render_b6(rows: list[dict]) -> str:
     if not rows:
         return "% B6: no results yet\n"
-    by_variant = {r["variant"]: r for r in rows if "variant" in r}
-    if not {"baseline", "cellmapflow"}.issubset(by_variant):
-        return "% B6: need both baseline and cellmapflow runs to render\n"
-    bl = by_variant["baseline"]
-    cf = by_variant["cellmapflow"]
+    # run_baseline.py emits two rows, both variant="baseline", distinguished by
+    # the `first_view_only` flag; run_cellmapflow.py emits one variant="cellmapflow".
+    baselines = [r for r in rows if r.get("variant") == "baseline"]
+    bl_first = next((r for r in baselines if r.get("first_view_only")), None)
+    bl_full = next((r for r in baselines if not r.get("first_view_only")), None)
+    cf = next((r for r in rows if r.get("variant") == "cellmapflow"), None)
+    missing = [
+        name
+        for name, row in [
+            ("baseline first-view", bl_first),
+            ("baseline full-volume", bl_full),
+            ("cellmapflow", cf),
+        ]
+        if row is None
+    ]
+    if missing:
+        return f"% B6: missing runs to render: {', '.join(missing)}\n"
     lines = [
         "\\begin{table}[tbhp]",
         "\\centering",
@@ -102,8 +126,8 @@ def render_b6(rows: list[dict]) -> str:
         "\\toprule",
         "Pipeline & first-view (s) & full-volume (s) & LoC \\\\",
         "\\midrule",
-        f"Hand-rolled PyTorch baseline & {bl.get('wall_time_s', 0):.1f} (first-view-only run) & "
-        f"{bl.get('wall_time_s', 0):.1f} (full run) & {bl.get('lines_of_code', 0)} \\\\",
+        f"Hand-rolled PyTorch baseline & {bl_first.get('wall_time_s', 0):.1f} & "
+        f"{bl_full.get('wall_time_s', 0):.1f} & {bl_full.get('lines_of_code', 0)} \\\\",
         f"\\cellmapflow{{}} & {cf.get('time_to_first_view_s', 0):.1f} & "
         f"{cf.get('time_to_completion_s', 0):.1f} & {cf.get('lines_of_code_total', 0)} \\\\",
         "\\bottomrule",

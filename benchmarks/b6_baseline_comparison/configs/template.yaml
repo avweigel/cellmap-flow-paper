@@ -1,30 +1,55 @@
 # B6 shared config. Both run_baseline.py and run_cellmapflow.py read this.
+#
+# Same model, same input, same physical region for both pipelines:
+#   - baseline (run_baseline.py): hand-rolled chunked PyTorch over a TorchScript
+#     export of the model, ROIs expressed in VOXELS of the input array below.
+#   - cellmap-flow (run_cellmapflow.py): server (first-view) + blockwise YAML
+#     (full-volume), using the same HuggingFace model.
+#
+# Defaults below mirror the rest of the suite: jrc_hela-2 at s1 (~8 nm) with
+# cellmap/fly_organelles_run07_700000. Tune the sub-volume so a full run
+# finishes in tens of minutes; keep the baseline ROI and the blockwise
+# bounding box (in cf_blockwise_jrc_hela-2.yaml) covering the SAME region.
 
-# Same model, same input, same chunking — both pipelines must use these.
-data_path: "/path/to/jrc_mus-salivary-1.zarr/recon-1/em/fibsem-uint8/s0"
-model_checkpoint: "/path/to/torchscript_model.pt"
+# --- shared input + model ---
+data_path: "s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
+hf_repo: "cellmap/fly_organelles_run07_700000"   # cellmap-flow side (server + blockwise)
+
+# TorchScript export of the SAME model, for the hand-rolled baseline only.
+# One-time export instructions are in benchmarks/RUNBOOK.md (B6 section).
+model_checkpoint: "/groups/cellmap/cellmap/weigela/b6/fly_organelles_run07_700000.ts"
+
+# --- baseline chunking (run_baseline.py) ---
+# IMPORTANT: chunk_shape + 2*context must be a valid input size for the model
+# (the fly U-Net wants a 178^3 input at 8 nm). Calibrate these against the
+# actual exported model before trusting baseline timings.
 chunk_shape: [128, 128, 128]
-context: [16, 16, 16]
+context: [25, 25, 25]
 output_dtype: "float32"
 
-# Time-to-first-view ROI: small enough to feel "interactive" — approximates
-# what a user sees at scale s2 in Neuroglancer on first opening the dataset.
+# Time-to-first-view ROI (baseline): small region that "feels interactive."
+# In VOXELS of data_path (s1).
 first_view_roi_offset: [1024, 1024, 1024]
 first_view_roi_shape:  [256, 256, 256]
-first_view_output_path: "/path/to/out/b6_first_view.zarr"
+first_view_output_path: "/nrs/cellmap/weigela/b6/baseline_first_view.zarr"
 
-# Full-volume ROI: a single contiguous sub-volume for completion timing.
-# Sized to finish in tens of minutes on H100 so both pipelines are tractable
-# to repeat. Keep it identical between baseline and cellmap-flow.
+# Full-volume ROI (baseline): one contiguous sub-volume, in VOXELS of s1.
+# 512^3 voxels at ~8 nm == 4096 nm per side; matches the blockwise bbox below.
 full_volume_roi_offset: [0, 0, 0]
-full_volume_roi_shape:  [4096, 4096, 4096]
-output_path: "/path/to/out/b6_full.zarr"
+full_volume_roi_shape:  [512, 512, 512]
+output_path: "/nrs/cellmap/weigela/b6/baseline_full.zarr"
 
-# cellmap-flow side reads its own YAMLs (not this one). Provide their paths so
-# the harness can dispatch them.
-cellmap_flow_server_yaml:    "configs/cf_server.yaml"
-cellmap_flow_blockwise_yaml: "configs/cf_blockwise.yaml"
+# --- cellmap-flow first-view (run_cellmapflow.py launches the server) ---
+# The server is `cellmap_flow_server <cf_model_type> --repo <hf_repo> -d <data_path> -p <port>`.
+cf_model_type: "huggingface"
+# server_dataset/scale/first_chunk build the poll URL:
+#   http://127.0.0.1:<port>/<server_dataset>/s<server_scale>/<server_first_chunk>
+# Defaults match B1's working setup (dataset "data", s1).
+server_dataset: "data"
+server_scale: 1
+server_first_chunk: "0.0.0"
+server_boot_timeout_s: 600
+# cf_server_extra_flags: {"--name": "fly"}   # optional extra server flags
 
-# URL path component for the first chunk request, used to detect "first view".
-# Keep this aligned with the dataset name in cf_server.yaml.
-first_chunk_url_path: "jrc_mus-salivary-1.zarr/s0/0.0.0"
+# --- cellmap-flow full-volume (run_cellmapflow.py dispatches blockwise) ---
+cellmap_flow_blockwise_yaml: "benchmarks/b6_baseline_comparison/configs/cf_blockwise_jrc_hela-2.yaml"

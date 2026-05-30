@@ -14,10 +14,21 @@ models:
     type: huggingface
     repo: cellmap/fly_organelles_run07_700000
 
-# Pick a fresh output path per sweep so previously-written blocks don't get
-# skipped (which would distort wall-time measurements). Replace <user> below.
-output_path: "/nrs/cellmap/<user>/benchmarks/b3_strong_scaling/jrc_hela-2_fly_organelles.zarr/s1"
+# run.py rewrites this per worker-count (inserts _n<NNNN> before .zarr) so each
+# point in the sweep writes to a fresh container and no blocks are skipped.
+output_path: "/nrs/cellmap/weigela/benchmarks/b3_strong_scaling/jrc_hela-2_fly_organelles.zarr/s1"
 task_name: "b3_strong_scaling_jrc_hela-2_fly_organelles"
 
 # Replaced by run.py per N. Default kept for dry-run inspection.
 workers: 1
+
+# Strong scaling needs a FIXED, BOUNDED volume (without this, blockwise
+# processes the entire dataset, so N=1 never finishes). offset/shape are in
+# WORLD units (nm) and snap to the 8 nm output grid. The SAME box is used for
+# jrc_mus-liver so the two curves are directly comparable. Calibrate the size
+# so N=1 finishes in tens of minutes and N=128 still has enough blocks to keep
+# every worker busy (see RUNBOOK B3 calibration note).
+bounding_boxes:
+  - offset: [0, 0, 0]
+    shape: [8192, 8192, 8192]
+separate_bounding_boxes_zarrs: true

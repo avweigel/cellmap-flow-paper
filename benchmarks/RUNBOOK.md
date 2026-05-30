@@ -39,15 +39,27 @@ Both use `cellmap/fly_organelles_run07_700000` so the model is held fixed; laten
 
 ### Run
 
-Repeat for each dataset. In **terminal A** on a GPU node (e.g., `bsub -Is -q gpu_h100 -gpu "num=1" /bin/bash`):
+Repeat for each dataset. In **terminal A** on a GPU node (e.g., `bsub -Is -q gpu_h100 -gpu "num=1" /bin/bash`).
+
+Launch the chunk-serving server **directly** with `cellmap_flow_server` — NOT
+`cellmap_flow_yaml`. `cellmap_flow_yaml` submits one bsub job per model and then
+busy-loops; it does not itself serve chunks on the local node. `cellmap_flow_server`
+is a click group whose subcommand is the model type (`huggingface`, `fly`,
+`dacapo`, …), so the model is given on the command line rather than via the YAML:
 
 ```sh
 # cell culture
-cellmap_flow_yaml benchmarks/b1_interactive_latency/configs/jrc_hela-2_fly_organelles.yaml
-# ... or, for the tissue dataset:
-cellmap_flow_yaml benchmarks/b1_interactive_latency/configs/jrc_mus-liver_fly_organelles.yaml
-# note the host:port the server prints, e.g. http://h09u01.int.janelia.org:8000
+cellmap_flow_server huggingface \
+    --repo cellmap/fly_organelles_run07_700000 \
+    -d s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1 \
+    -p 0   # 0 = auto-pick a free port
+# ... or, for the tissue dataset, swap the -d path to jrc_mus-liver/.../s1
+# note the host:port the server prints, e.g. http://127.0.0.1:22541
 ```
+
+The pre-filled `configs/*_fly_organelles.yaml` capture the same data_path + model
+for the record and for the `cellmap_flow_yaml` cluster-dispatch path; the
+interactive B1 measurement above talks to a `cellmap_flow_server` on the node.
 
 In **terminal B** (anywhere with HTTP access to that host):
 
@@ -115,7 +127,9 @@ python -m benchmarks.b3_strong_scaling.run \
     --output-dir benchmarks/b3_strong_scaling/results/jrc_mus-liver_fly_organelles/
 ```
 
-The harness rewrites the YAML's `workers` field per run, dispatches `cellmap_flow_blockwise`, captures wall time, and writes one JSON per N to the output directory.
+The harness rewrites the YAML's `workers` field per run (and gives each N its own `_n<NNNN>.zarr` container), dispatches `cellmap_flow_blockwise`, captures wall time, and writes one JSON per N to the output directory. The orchestrator stays alive and `bsub`-submits N GPU workers via daisy, so run it on the submit host (or under `nohup`/`bsub` on a CPU queue), not on a login node that may reap long processes.
+
+**Calibrate the bounded volume first.** Both configs ship with a `bounding_boxes` cube (8192³ nm). Run a single `--workers 1` job and check the wall time and the daisy block count (in `daisy_logs/`): you want N=1 to finish in tens of minutes and enough blocks that N=128 still keeps every worker busy. Scale the cube edge up/down and re-run before committing to the full `1 4 16 64 128` sweep. Keep the box identical across the two datasets.
 
 ### Notes
 
@@ -149,18 +163,24 @@ torch.jit.script(m.model).save("/path/to/cellmap_flow_paper/benchmarks/b6_baseli
 
 Once you have a TorchScript file:
 
-- Edit [configs/template.yaml](b6_baseline_comparison/configs/template.yaml) to point at the TorchScript file (`model_checkpoint`) and the corresponding cellmap-flow `script` YAML.
-- Run:
+1. Open [configs/template.yaml](b6_baseline_comparison/configs/template.yaml) and set `model_checkpoint` to the `.ts` path. It is otherwise pre-filled for jrc\_hela-2 + fly\_organelles.
+   - **Calibrate the baseline chunking:** `chunk_shape + 2*context` must be a valid input size for the model (the fly U-Net wants a 178³ input at 8 nm). If the hand-rolled run errors on a shape mismatch, this is why — adjust `chunk_shape`/`context` to a size the exported model accepts.
+   - **Keep the regions aligned:** the baseline `full_volume_roi_shape` (voxels of s1) and the bounding box in [configs/cf_blockwise_jrc_hela-2.yaml](b6_baseline_comparison/configs/cf_blockwise_jrc_hela-2.yaml) (nanometers) must cover the same physical sub-volume so the completion timings are comparable. Defaults already match (512 voxels × 8 nm = 4096 nm).
+   - The cellmap-flow first-view server is launched by `run_cellmapflow.py` itself as `cellmap_flow_server huggingface --repo <hf_repo> -d <data_path> -p <port>` (the same entrypoint as B1); no separate server YAML is needed.
+2. Run (the two baseline invocations must write the two distinct filenames below — the aggregator distinguishes first-view from full-volume by the `first_view_only` flag, so don't collapse them into one file):
   ```sh
+  # baseline, full-volume completion
   python -m benchmarks.b6_baseline_comparison.run_baseline \
       --config benchmarks/b6_baseline_comparison/configs/template.yaml \
-      --output benchmarks/b6_baseline_comparison/results/baseline.json
+      --output benchmarks/b6_baseline_comparison/results/baseline_full.json
 
+  # baseline, first-view-only (time-to-first-view)
   python -m benchmarks.b6_baseline_comparison.run_baseline \
       --config benchmarks/b6_baseline_comparison/configs/template.yaml \
       --first-view-only \
       --output benchmarks/b6_baseline_comparison/results/baseline_first_view.json
 
+  # cellmap-flow: launches the server (first-view) then blockwise (completion)
   python -m benchmarks.b6_baseline_comparison.run_cellmapflow \
       --config benchmarks/b6_baseline_comparison/configs/template.yaml \
       --output benchmarks/b6_baseline_comparison/results/cellmapflow.json
@@ -171,7 +191,8 @@ Once you have a TorchScript file:
 ## After all runs: regenerate paper tables
 
 ```sh
-python benchmarks/regenerate_paper_tables.py \
+# run as a module from the repo root so `benchmarks` is importable
+python -m benchmarks.regenerate_paper_tables \
     --results-dir benchmarks/ \
     --out figures/benchmark_tables.tex
 ```

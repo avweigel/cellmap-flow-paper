@@ -1,0 +1,28 @@
+# B6 cellmap-flow blockwise config (full-volume completion stage).
+# Same model + dataset as the hand-rolled baseline (template.yaml), restricted
+# to one sub-volume via bounding_boxes so a full run is repeatable.
+#
+# Keep this bounding box covering the SAME physical region as the baseline's
+# full_volume ROI in template.yaml: offset/shape here are in WORLD units (nm)
+# and snap to the 8 nm output grid; the baseline's are in s1 voxels (~8 nm).
+# 512 voxels * 8 nm == 4096 nm.
+
+data_path: "s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
+charge_group: "cellmap"
+queue: "gpu_h100"
+
+models:
+  fly_organelles:
+    type: huggingface
+    repo: cellmap/fly_organelles_run07_700000
+
+output_path: "/nrs/cellmap/weigela/b6/cellmapflow_full.zarr/s1"
+task_name: "b6_cellmapflow_jrc_hela-2_fly_organelles"
+workers: 1
+
+# Limit to one sub-volume (nanometers). separate_bounding_boxes_zarrs sizes the
+# output array to the box rather than the whole dataset.
+bounding_boxes:
+  - offset: [0, 0, 0]
+    shape: [4096, 4096, 4096]
+separate_bounding_boxes_zarrs: true

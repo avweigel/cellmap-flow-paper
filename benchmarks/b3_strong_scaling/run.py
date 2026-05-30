@@ -47,10 +47,22 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def per_n_output_path(output_path: str, n_workers: int) -> str:
+    """Insert an _n<NNNN> tag before `.zarr` so each worker-count writes to its
+    own container. cellmap_flow_blockwise derives the container by splitting on
+    `.zarr`, so re-using one path across the sweep risks skipped/overwritten
+    blocks and distorted timings; a fresh container per N avoids that."""
+    if ".zarr" not in output_path:
+        raise ValueError(f"output_path must contain '.zarr': {output_path!r}")
+    container, _, rest = output_path.partition(".zarr")
+    return f"{container}_n{n_workers:04d}.zarr{rest}"
+
+
 def make_per_run_yaml(base_path: Path, n_workers: int, tmp_dir: Path) -> Path:
     with base_path.open() as f:
         cfg = yaml.safe_load(f)
     cfg["workers"] = n_workers
+    cfg["output_path"] = per_n_output_path(cfg["output_path"], n_workers)
     out = tmp_dir / f"config_n{n_workers}.yaml"
     with out.open("w") as f:
         yaml.safe_dump(cfg, f)

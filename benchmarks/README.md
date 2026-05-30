@@ -35,7 +35,8 @@ Results are written as JSON with both raw timings and the env metadata (git SHA,
 ## Aggregating for the paper
 
 ```sh
-python benchmarks/regenerate_paper_tables.py \
+# run as a module from the repo root so `benchmarks` is importable
+python -m benchmarks.regenerate_paper_tables \
     --results-dir benchmarks/ \
     --out figures/benchmark_tables.tex
 ```
