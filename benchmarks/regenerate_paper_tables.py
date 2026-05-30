@@ -19,6 +19,18 @@ def _esc(s) -> str:
     return str(s).replace("_", r"\_")
 
 
+def _clean_ds(label: str) -> str:
+    """Trim model/scale/GPU suffixes off a result label so the table shows just
+    the dataset (e.g. jrc_hela-2_fly_organelles_s1_h100 -> jrc_hela-2). The
+    stripped detail lives in the table caption instead, which keeps the rows
+    narrow enough to fit the column."""
+    for tok in ("_fly_organelles", "_s0", "_s1", "_s2", "_h100", "_a100", "_v100", "_cpu"):
+        i = label.find(tok)
+        if i != -1:
+            label = label[:i]
+    return label or "?"
+
+
 def _count_loc(path) -> int | None:
     """Non-blank, non-comment (#) lines of a file. Works for both .py and .yaml.
     Returns None if the file can't be read."""
@@ -70,23 +82,23 @@ def render_b1(rows: list[dict]) -> str:
     if not rows:
         return "% B1: no results yet\n"
     lines = [
-        "\\begin{table}[tbhp]",
+        "\\begin{table*}[tbhp]",
         "\\centering",
-        "\\caption{B1 interactive chunk-request latency. Median / p95 / p99 in ms over the measured request set.}",
+        "\\caption{B1 interactive chunk-request latency, model \\texttt{cellmap/fly\\_organelles\\_run07\\_700000} at scale s1 on a single H100. Median / p95 / p99 in ms over the measured request set.}",
         "\\label{tab:b1_results}",
         "\\small",
         "\\begin{tabular}{lrrrr}",
         "\\toprule",
-        "Configuration & N & median (ms) & p95 (ms) & p99 (ms) \\\\",
+        "Dataset & N & median (ms) & p95 (ms) & p99 (ms) \\\\",
         "\\midrule",
     ]
     for r in sorted(rows, key=lambda r: r.get("label", "")):
         s = r["summary"]
         lines.append(
-            f"{_esc(r.get('label', '?'))} & {s['count']} & {s['median_ms']:.1f} & "
+            f"{_esc(_clean_ds(r.get('label', '?')))} & {s['count']} & {s['median_ms']:.1f} & "
             f"{s['p95_ms']:.1f} & {s['p99_ms']:.1f} \\\\"
         )
-    lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}", ""]
+    lines += ["\\bottomrule", "\\end{tabular}", "\\end{table*}", ""]
     return "\n".join(lines)
 
 
@@ -121,10 +133,11 @@ def render_b3(rows: list[dict]) -> str:
     if dropped:
         lines.append(f"% B3: dropped failed (label, N) runs: {dropped}")
     lines += [
-        "\\begin{table}[tbhp]",
+        "\\begin{table*}[tbhp]",
         "\\centering",
-        "\\caption{B3 cluster strong scaling. Wall time, speedup, and parallel "
-        "efficiency vs.\\ $N{=}1$ at each worker count, for a fixed sub-volume.}",
+        "\\caption{B3 cluster strong scaling (\\texttt{fly\\_organelles} model, "
+        "fixed $8192^3$~nm sub-volume, single-GPU H100 workers). Wall time, "
+        "speedup, and parallel efficiency vs.\\ $N{=}1$ at each worker count.}",
         "\\label{tab:b3_results}",
         "\\small",
         "\\begin{tabular}{lrrrr}",
@@ -140,12 +153,12 @@ def render_b3(rows: list[dict]) -> str:
         for j, r in enumerate(grp):
             speedup = base["wall_time_s"] / r["wall_time_s"] if r["wall_time_s"] > 0 else 0.0
             eff = speedup / r["n_workers"] if r["n_workers"] > 0 else 0.0
-            ds = _esc(label) if j == 0 else ""
+            ds = _esc(_clean_ds(label)) if j == 0 else ""
             lines.append(
                 f"{ds} & {r['n_workers']} & {r['wall_time_s']:.1f} & "
                 f"{speedup:.2f}$\\times$ & {eff:.2f} \\\\"
             )
-    lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}", ""]
+    lines += ["\\bottomrule", "\\end{tabular}", "\\end{table*}", ""]
     return "\n".join(lines)
 
 
@@ -173,7 +186,7 @@ def render_b6(rows: list[dict]) -> str:
     bl_loc = bl_loc if bl_loc is not None else bl_full.get("lines_of_code", 0)
     cf_loc = cf_loc if cf_loc is not None else cf.get("lines_of_code_total", 0)
     lines = [
-        "\\begin{table}[tbhp]",
+        "\\begin{table*}[tbhp]",
         "\\centering",
         "\\caption{B6 \\cellmapflow{} vs.\\ a hand-rolled PyTorch baseline on the "
         "same task and the same single H100. Times in seconds; user LoC is the "
@@ -191,7 +204,7 @@ def render_b6(rows: list[dict]) -> str:
         f"{cf.get('time_to_completion_s', 0):.1f} & {cf_loc} \\\\",
         "\\bottomrule",
         "\\end{tabular}",
-        "\\end{table}",
+        "\\end{table*}",
         "",
     ]
     return "\n".join(lines)
