@@ -5,7 +5,7 @@
 
 \begin{figure*}[tbhp]
 \centering
-% \includegraphics[width=\textwidth]{figures/fig1_architecture}
+\includegraphics[width=\textwidth]{fig1_architecture}
 \caption{\cellmapflow{} architecture. (A)~The data-access layer (\texttt{ImageDataInterface}) presents a unified view of Zarr/N5/OME-Zarr/precomputed inputs through TensorStore. (B)~The compute layer (\texttt{Inferencer}) loads a model from one of several supported formats, applies an input normaliser, runs forward inference with optional half-precision and context padding, and applies an output post-processor. (C)~The service layer either serves predictions on demand as a virtual Zarr over HTTP for Neuroglancer (server mode) or executes whole-volume inference through a Daisy-managed pool of GPU workers on an LSF cluster (blockwise mode). Both modes share the same YAML configuration.}
 \label{fig:architecture}
 \end{figure*}
