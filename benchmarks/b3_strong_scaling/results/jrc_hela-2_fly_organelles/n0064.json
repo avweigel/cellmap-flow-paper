@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-05-30T21:15:11.962107+00:00",
+  "benchmark": "b3_strong_scaling",
+  "label": "jrc_hela-2_fly_organelles",
+  "n_workers": 64,
+  "wall_time_s": 198.24476945586503,
+  "return_code": 0,
+  "config_used": "benchmarks/b3_strong_scaling/results/jrc_hela-2_fly_organelles/_configs/config_n64.yaml",
+  "base_config": "/groups/jls/home/weigela/cellmap-flow-paper/benchmarks/b3_strong_scaling/configs/jrc_hela-2_fly_organelles.yaml",
+  "env": {
+    "hostname": "vm7134",
+    "platform": "Linux-5.15.0-101.103.2.1.el9uek.x86_64-x86_64-with-glibc2.34",
+    "python": "3.11.15",
+    "git_sha": "d9e35f9986ac575501b73a9a3517acffa60f138c",
+    "gpu": {
+      "available": false,
+      "name": null,
+      "count": 0
+    },
+    "packages": {
+      "cellmap-flow": "0.2.3",
+      "torch": "2.11.0",
+      "numpy": "2.4.4",
+      "zarr": "2.18.4",
+      "tensorstore": "0.1.82",
+      "daisy": "1.2.2",
+      "neuroglancer": "2.41.2"
+    }
+  }
+}
