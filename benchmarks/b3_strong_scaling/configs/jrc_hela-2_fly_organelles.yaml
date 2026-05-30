@@ -5,7 +5,10 @@
 # Dataset: jrc_hela-2 (Heinrich et al., Nature 2021), public S3.
 # Model: cellmap/fly_organelles_run07_700000, public HuggingFace.
 
-data_path: "s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
+# Janelia /nrs mirror of the public S3 volume
+# (s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr). The S3 path is the
+# same data but this tensorstore build can't parse its anonymous-S3 spec.
+data_path: "/nrs/cellmap/data/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
 charge_group: "cellmap"
 queue: "gpu_h100"
 

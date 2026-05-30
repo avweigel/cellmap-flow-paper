@@ -6,7 +6,9 @@
 # Dataset: jrc_mus-liver (Heinrich et al., Nature 2021), public S3.
 # Model: cellmap/fly_organelles_run07_700000, public HuggingFace.
 
-data_path: "s3://janelia-cosem-datasets/jrc_mus-liver/jrc_mus-liver.zarr/recon-1/em/fibsem-uint8/s1"
+# Janelia /nrs mirror of the public S3 volume
+# (s3://janelia-cosem-datasets/jrc_mus-liver/jrc_mus-liver.zarr).
+data_path: "/nrs/cellmap/data/jrc_mus-liver/jrc_mus-liver.zarr/recon-1/em/fibsem-uint8/s1"
 charge_group: "cellmap"
 queue: "gpu_h100"
 

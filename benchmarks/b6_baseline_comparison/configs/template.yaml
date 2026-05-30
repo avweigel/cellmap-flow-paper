@@ -12,7 +12,7 @@
 # bounding box (in cf_blockwise_jrc_hela-2.yaml) covering the SAME region.
 
 # --- shared input + model ---
-data_path: "s3://janelia-cosem-datasets/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
+data_path: "/nrs/cellmap/data/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
 hf_repo: "cellmap/fly_organelles_run07_700000"   # cellmap-flow side (server + blockwise)
 
 # TorchScript export of the SAME model, for the hand-rolled baseline only.
