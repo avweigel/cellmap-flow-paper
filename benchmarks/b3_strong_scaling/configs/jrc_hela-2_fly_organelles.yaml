@@ -19,6 +19,11 @@ models:
 output_path: "/nrs/cellmap/weigela/benchmarks/b3_strong_scaling/jrc_hela-2_fly_organelles.zarr/s1"
 task_name: "b3_strong_scaling_jrc_hela-2_fly_organelles"
 
+# Mandatory: cellmap-flow blockwise tracks block progress under tmp_dir. run.py
+# rewrites this to a per-N subdir and wipes it before each run so every
+# worker-count does a clean full pass (no skipped blocks => honest timings).
+tmp_dir: "/nrs/cellmap/weigela/benchmarks/b3_strong_scaling/tmp/jrc_hela-2_fly_organelles"
+
 # Replaced by run.py per N. Default kept for dry-run inspection.
 workers: 1
 

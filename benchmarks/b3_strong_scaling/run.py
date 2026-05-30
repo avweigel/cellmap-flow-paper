@@ -58,15 +58,30 @@ def per_n_output_path(output_path: str, n_workers: int) -> str:
     return f"{container}_n{n_workers:04d}.zarr{rest}"
 
 
-def make_per_run_yaml(base_path: Path, n_workers: int, tmp_dir: Path) -> Path:
+def make_per_run_yaml(base_path: Path, n_workers: int, config_dir: Path) -> tuple[Path, Path]:
+    """Write a per-N config and return (yaml_path, progress_tmp_dir).
+
+    Each worker-count gets its OWN output container and its OWN progress
+    `tmp_dir`. The installed cellmap-flow blockwise always tracks block progress
+    via marker files under `<tmp_dir>/tmp_flow_daisy_progress_<task_name>` and
+    skips any block already marked done -- so re-using one tmp_dir across the
+    sweep would make every run after N=1 skip blocks and report a fake speedup.
+    The per-N tmp_dir is wiped before each run (in main) for a clean full pass."""
     with base_path.open() as f:
         cfg = yaml.safe_load(f)
+    if "tmp_dir" not in cfg:
+        raise ValueError(
+            "config must set tmp_dir: the installed cellmap-flow blockwise "
+            "requires it (block-progress tracking is mandatory)."
+        )
     cfg["workers"] = n_workers
     cfg["output_path"] = per_n_output_path(cfg["output_path"], n_workers)
-    out = tmp_dir / f"config_n{n_workers}.yaml"
+    per_n_tmp = f"{str(cfg['tmp_dir']).rstrip('/')}/n{n_workers:04d}"
+    cfg["tmp_dir"] = per_n_tmp
+    out = config_dir / f"config_n{n_workers}.yaml"
     with out.open("w") as f:
         yaml.safe_dump(cfg, f)
-    return out
+    return out, Path(per_n_tmp)
 
 
 def run_blockwise(cmd: str, yaml_path: Path) -> tuple[int, float]:
@@ -91,11 +106,14 @@ def main() -> int:
         print(f"warning: {args.blockwise_cmd} not on PATH", file=sys.stderr)
 
     for n in args.workers:
-        per_run_yaml = make_per_run_yaml(base, n, tmp)
+        per_run_yaml, progress_tmp = make_per_run_yaml(base, n, tmp)
         cmd_str = f"{args.blockwise_cmd} {per_run_yaml}"
         print(f"\n=== N={n} workers ===\n{cmd_str}", file=sys.stderr)
         if args.dry_run:
             continue
+        # Wipe any stale block-progress markers so this is a clean full pass.
+        if progress_tmp.exists():
+            shutil.rmtree(progress_tmp, ignore_errors=True)
         rc, wall = run_blockwise(args.blockwise_cmd, per_run_yaml)
         payload = {
             "benchmark": "b3_strong_scaling",

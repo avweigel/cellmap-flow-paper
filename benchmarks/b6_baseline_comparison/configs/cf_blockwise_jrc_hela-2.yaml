@@ -20,6 +20,10 @@ output_path: "/nrs/cellmap/weigela/b6/cellmapflow_full.zarr/s1"
 task_name: "b6_cellmapflow_jrc_hela-2_fly_organelles"
 workers: 1
 
+# Mandatory in the installed cellmap-flow: blockwise tracks block progress here.
+# Use a fresh tmp_dir for a clean full run (delete it between repeats).
+tmp_dir: "/nrs/cellmap/weigela/b6/tmp/cellmapflow_jrc_hela-2"
+
 # Limit to one sub-volume (nanometers). separate_bounding_boxes_zarrs sizes the
 # output array to the box rather than the whole dataset.
 bounding_boxes:
