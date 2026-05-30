@@ -15,16 +15,18 @@
 data_path: "/nrs/cellmap/data/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
 hf_repo: "cellmap/fly_organelles_run07_700000"   # cellmap-flow side (server + blockwise)
 
-# TorchScript export of the SAME model, for the hand-rolled baseline only.
-# One-time export instructions are in benchmarks/RUNBOOK.md (B6 section).
-model_checkpoint: "/groups/cellmap/cellmap/weigela/b6/fly_organelles_run07_700000.ts"
+# TorchScript model for the hand-rolled baseline. The fly_organelles HF repo
+# ships model.ts directly (no export needed); RUNBOOK B6 has the download.
+model_checkpoint: "/nrs/cellmap/weigela/b6/fly_organelles_run07_700000.ts"
 
 # --- baseline chunking (run_baseline.py) ---
-# IMPORTANT: chunk_shape + 2*context must be a valid input size for the model
-# (the fly U-Net wants a 178^3 input at 8 nm). Calibrate these against the
-# actual exported model before trusting baseline timings.
-chunk_shape: [128, 128, 128]
-context: [25, 25, 25]
+# The fly U-Net is a valid-conv model: a 178^3 input yields a 56^3 x 8-channel
+# output. The baseline steps by the OUTPUT block (56^3) and reads a 178^3 input
+# window centered on it (context = (178-56)/2 = 61 per side). These match the
+# read_shape/write_shape cellmap-flow uses, so the two pipelines do equal work.
+input_block_shape:  [178, 178, 178]
+output_block_shape: [56, 56, 56]
+out_channel: 0          # which of the 8 output channels the baseline writes
 output_dtype: "float32"
 
 # Time-to-first-view ROI (baseline): small region that "feels interactive."
