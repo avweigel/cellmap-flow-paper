@@ -34,4 +34,17 @@ jrc\_hela-2\_fly\_organelles & 1 & 1292.1 & 1.00$\times$ & 1.00 \\
 \end{table}
 
 % --- b6_baseline_comparison ---
-% B6: no results yet
+\begin{table}[tbhp]
+\centering
+\caption{B6 \cellmapflow{} vs.\ a hand-rolled PyTorch baseline on the same task and the same single H100. Times in seconds; user LoC is the hand-written inference script vs.\ the cellmap-flow YAML config plus its CLI invocation.}
+\label{tab:b6_results}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Pipeline & first-view (s) & full-volume (s) & user LoC \\
+\midrule
+Hand-rolled PyTorch baseline & 6.7 & 79.6 & 113 \\
+\cellmapflow{} & 6.9 & 214.1 & 16 \\
+\bottomrule
+\end{tabular}
+\end{table}

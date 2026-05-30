@@ -19,6 +19,38 @@ def _esc(s) -> str:
     return str(s).replace("_", r"\_")
 
 
+def _count_loc(path) -> int | None:
+    """Non-blank, non-comment (#) lines of a file. Works for both .py and .yaml.
+    Returns None if the file can't be read."""
+    try:
+        lines = Path(path).read_text().splitlines()
+    except OSError:
+        return None
+    return sum(1 for ln in lines if ln.strip() and not ln.strip().startswith("#"))
+
+
+def _b6_user_loc(cf_row: dict) -> tuple[int | None, int | None]:
+    """User-facing lines of code for the B6 comparison: the hand-rolled
+    inference *script* a user must write for the baseline, vs the *YAML config*
+    a user writes to drive cellmap-flow (plus one CLI line). This is the real
+    operational-effort comparison -- not the line counts of the benchmark
+    harness scripts, which the stored *_loc fields record. Falls back to those
+    stored values if the artifacts can't be read."""
+    here = Path(__file__).parent / "b6_baseline_comparison"
+    baseline_loc = _count_loc(here / "run_baseline.py")
+    cf_loc = None
+    try:
+        import yaml  # noqa: PLC0415
+        shared = yaml.safe_load(Path(cf_row.get("config", "")).read_text())
+        bw_yaml = shared.get("cellmap_flow_blockwise_yaml")
+        n = _count_loc(bw_yaml)
+        if n is not None:
+            cf_loc = n + 1  # + the single CLI invocation
+    except Exception:
+        cf_loc = None
+    return baseline_loc, cf_loc
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
@@ -137,20 +169,26 @@ def render_b6(rows: list[dict]) -> str:
     ]
     if missing:
         return f"% B6: missing runs to render: {', '.join(missing)}\n"
+    bl_loc, cf_loc = _b6_user_loc(cf)
+    bl_loc = bl_loc if bl_loc is not None else bl_full.get("lines_of_code", 0)
+    cf_loc = cf_loc if cf_loc is not None else cf.get("lines_of_code_total", 0)
     lines = [
         "\\begin{table}[tbhp]",
         "\\centering",
-        "\\caption{B6 \\cellmapflow{} vs.\\ hand-rolled PyTorch baseline on the same task. Times in seconds.}",
+        "\\caption{B6 \\cellmapflow{} vs.\\ a hand-rolled PyTorch baseline on the "
+        "same task and the same single H100. Times in seconds; user LoC is the "
+        "hand-written inference script vs.\\ the cellmap-flow YAML config plus its "
+        "CLI invocation.}",
         "\\label{tab:b6_results}",
         "\\small",
         "\\begin{tabular}{lrrr}",
         "\\toprule",
-        "Pipeline & first-view (s) & full-volume (s) & LoC \\\\",
+        "Pipeline & first-view (s) & full-volume (s) & user LoC \\\\",
         "\\midrule",
         f"Hand-rolled PyTorch baseline & {bl_first.get('wall_time_s', 0):.1f} & "
-        f"{bl_full.get('wall_time_s', 0):.1f} & {bl_full.get('lines_of_code', 0)} \\\\",
+        f"{bl_full.get('wall_time_s', 0):.1f} & {bl_loc} \\\\",
         f"\\cellmapflow{{}} & {cf.get('time_to_first_view_s', 0):.1f} & "
-        f"{cf.get('time_to_completion_s', 0):.1f} & {cf.get('lines_of_code_total', 0)} \\\\",
+        f"{cf.get('time_to_completion_s', 0):.1f} & {cf_loc} \\\\",
         "\\bottomrule",
         "\\end{tabular}",
         "\\end{table}",
