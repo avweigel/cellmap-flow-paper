@@ -19,16 +19,16 @@ jrc\_mus-liver\_fly\_organelles\_s1\_h100 & 200 & 172.0 & 225.9 & 244.9 \\
 % --- b3_strong_scaling ---
 \begin{table}[tbhp]
 \centering
-\caption{B3 cluster strong scaling. Wall time and speedup vs.\ ideal at each worker count.}
+\caption{B3 cluster strong scaling. Wall time, speedup, and parallel efficiency vs.\ $N{=}1$ at each worker count, for a fixed sub-volume.}
 \label{tab:b3_results}
 \small
-\begin{tabular}{rrrr}
+\begin{tabular}{lrrrr}
 \toprule
-$N$ workers & wall (s) & speedup & efficiency \\
+Dataset & $N$ & wall (s) & speedup & efficiency \\
 \midrule
-1 & 1292.1 & 1.00$\times$ & 1.00 \\
-4 & 401.4 & 3.22$\times$ & 0.80 \\
-16 & 267.7 & 4.83$\times$ & 0.30 \\
+jrc\_hela-2\_fly\_organelles & 1 & 1292.1 & 1.00$\times$ & 1.00 \\
+ & 4 & 401.4 & 3.22$\times$ & 0.80 \\
+ & 16 & 267.7 & 4.83$\times$ & 0.30 \\
 \bottomrule
 \end{tabular}
 \end{table}

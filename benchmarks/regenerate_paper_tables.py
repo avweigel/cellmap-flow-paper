@@ -58,40 +58,61 @@ def render_b1(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _b3_label(r: dict) -> str:
+    """Dataset label for grouping; falls back to the config stem for rows
+    written before the harness recorded an explicit label."""
+    if r.get("label"):
+        return r["label"]
+    from pathlib import Path as _P
+    return _P(r.get("base_config", "unknown")).stem
+
+
 def render_b3(rows: list[dict]) -> str:
     if not rows:
         return "% B3: no results yet\n"
     # A nonzero return code means cellmap_flow_blockwise crashed; its wall time is
     # whatever it took to fail, not a valid scaling point. Dropping these avoids
     # fabricating a huge speedup from a fast failure.
-    dropped = [r["n_workers"] for r in rows if r.get("return_code", 0) != 0]
+    dropped = sorted(
+        {(_b3_label(r), r["n_workers"]) for r in rows if r.get("return_code", 0) != 0}
+    )
     rows = [r for r in rows if r.get("return_code", 0) == 0]
     if not rows:
         return "% B3: all runs failed (nonzero return_code); no valid scaling points\n"
-    rows = sorted(rows, key=lambda r: r["n_workers"])
-    base = next((r for r in rows if r["n_workers"] == 1), rows[0])
+
+    # Group into one curve per dataset; speedup is relative to each dataset's own N=1.
+    groups = defaultdict(list)
+    for r in rows:
+        groups[_b3_label(r)].append(r)
+
     lines = []
     if dropped:
-        lines.append(
-            f"% B3: dropped failed worker counts (nonzero return_code): {sorted(dropped)}"
-        )
+        lines.append(f"% B3: dropped failed (label, N) runs: {dropped}")
     lines += [
         "\\begin{table}[tbhp]",
         "\\centering",
-        "\\caption{B3 cluster strong scaling. Wall time and speedup vs.\\ ideal at each worker count.}",
+        "\\caption{B3 cluster strong scaling. Wall time, speedup, and parallel "
+        "efficiency vs.\\ $N{=}1$ at each worker count, for a fixed sub-volume.}",
         "\\label{tab:b3_results}",
         "\\small",
-        "\\begin{tabular}{rrrr}",
+        "\\begin{tabular}{lrrrr}",
         "\\toprule",
-        "$N$ workers & wall (s) & speedup & efficiency \\\\",
+        "Dataset & $N$ & wall (s) & speedup & efficiency \\\\",
         "\\midrule",
     ]
-    for r in rows:
-        speedup = base["wall_time_s"] / r["wall_time_s"] if r["wall_time_s"] > 0 else 0.0
-        eff = speedup / r["n_workers"] if r["n_workers"] > 0 else 0.0
-        lines.append(
-            f"{r['n_workers']} & {r['wall_time_s']:.1f} & {speedup:.2f}$\\times$ & {eff:.2f} \\\\"
-        )
+    for gi, label in enumerate(sorted(groups)):
+        grp = sorted(groups[label], key=lambda r: r["n_workers"])
+        base = next((r for r in grp if r["n_workers"] == 1), grp[0])
+        if gi:
+            lines.append("\\midrule")
+        for j, r in enumerate(grp):
+            speedup = base["wall_time_s"] / r["wall_time_s"] if r["wall_time_s"] > 0 else 0.0
+            eff = speedup / r["n_workers"] if r["n_workers"] > 0 else 0.0
+            ds = _esc(label) if j == 0 else ""
+            lines.append(
+                f"{ds} & {r['n_workers']} & {r['wall_time_s']:.1f} & "
+                f"{speedup:.2f}$\\times$ & {eff:.2f} \\\\"
+            )
     lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}", ""]
     return "\n".join(lines)
 

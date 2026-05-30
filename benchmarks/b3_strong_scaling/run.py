@@ -40,6 +40,13 @@ def parse_args() -> argparse.Namespace:
         help="entrypoint to invoke; override if cellmap-flow is installed under a different name",
     )
     p.add_argument(
+        "--label",
+        default="",
+        help="dataset label for this sweep (defaults to the config file stem); "
+        "the aggregator groups scaling rows by this so multiple datasets render "
+        "as separate curves",
+    )
+    p.add_argument(
         "--dry-run",
         action="store_true",
         help="print the per-N command without executing",
@@ -102,6 +109,8 @@ def main() -> int:
     tmp = out_dir / "_configs"
     tmp.mkdir(exist_ok=True)
 
+    label = args.label or base.stem
+
     if shutil.which(args.blockwise_cmd) is None and not args.dry_run:
         print(f"warning: {args.blockwise_cmd} not on PATH", file=sys.stderr)
 
@@ -117,6 +126,7 @@ def main() -> int:
         rc, wall = run_blockwise(args.blockwise_cmd, per_run_yaml)
         payload = {
             "benchmark": "b3_strong_scaling",
+            "label": label,
             "n_workers": n,
             "wall_time_s": wall,
             "return_code": rc,
