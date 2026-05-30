@@ -43,6 +43,14 @@ python -m benchmarks.regenerate_paper_tables \
 
 The output `figures/benchmark_tables.tex` is included from the paper's benchmarks section via `\input{figures/benchmark_tables}`.
 
+Publication plots are generated the same way (reads the same result JSONs):
+
+```sh
+python -m benchmarks.make_figures --results-dir benchmarks --out-dir figures
+```
+
+This writes `figures/b1_latency.pdf` (latency box plot) and `figures/b3_scaling.pdf` (wall time + parallel efficiency vs. workers), which the benchmarks section `\includegraphics`. Re-run after new results land.
+
 ## What we expect from each benchmark
 
 | ID | Question | Primary metric |

@@ -32,7 +32,14 @@ B10 & Long-running stability (24~h server, real workload) & failure rate, drift 
 
 \paragraph{Protocol.} Use two published OpenOrganelle datasets that span the cell-culture / tissue axis and a meaningful size disparity: \texttt{jrc\_hela-2} (HeLa cell line, $\sim$122~GB at \texttt{s0}) and \texttt{jrc\_mus-liver} (mouse liver, $\sim$1.45~TB at \texttt{s0}, $\sim$12$\times$ larger), both from Heinrich et al.\ 2021 \cite{Heinrich2021}. The size disparity is deliberate: \texttt{jrc\_hela-2} still fits in main memory, while \texttt{jrc\_mus-liver} does not, so the larger dataset exercises the chunked-inference value proposition that motivates \cellmapflow{}. The medium-size model is \texttt{cellmap/fly\_organelles\_run07\_700000}, a 3D U-Net with native input shape $178^3$ at 8~nm voxel size. For each dataset, request 200 chunks at random spatial offsets through the HTTP server after a 20-chunk warm-up; report median, p95, and p99 wall-clock time per chunk.
 
-\paragraph{First-pass results.} On a single NVIDIA H100 80GB GPU reading inputs from Janelia's \texttt{/nrs/cellmap} mount, both datasets land squarely in interactive territory: chunk-request latencies are well under 250~ms at p99 in both cases (Tab.~\ref{tab:b1_results}). The tissue dataset is $\sim$70\% slower per chunk than the cell-culture dataset, consistent with denser content compressing less and producing larger Zarr chunks to read; chunk payload sizes range from $\sim$700~bytes to $\sim$5~MB across the random-offset sweep on \texttt{jrc\_hela-2}.
+\paragraph{First-pass results.} On a single NVIDIA H100 80GB GPU reading inputs from Janelia's \texttt{/nrs/cellmap} mount, both datasets land squarely in interactive territory: chunk-request latencies are well under 250~ms at p99 in both cases (Tab.~\ref{tab:b1_results}, Fig.~\ref{fig:b1_latency}). The tissue dataset is $\sim$70\% slower per chunk than the cell-culture dataset, consistent with denser content compressing less and producing larger Zarr chunks to read; chunk payload sizes range from $\sim$700~bytes to $\sim$5~MB across the random-offset sweep on \texttt{jrc\_hela-2}.
+
+\begin{figure}[tbhp]
+\centering
+\includegraphics[width=\linewidth]{b1_latency}
+\caption{B1 interactive chunk-request latency on a single H100, over 200 random-offset requests per dataset after a 20-request warm-up. Boxes span the interquartile range, the red line is the median, whiskers the 5th/95th percentiles, and the diamond marks p99. Both datasets stay under 250~ms at p99; the tissue volume (\texttt{jrc\_mus-liver}) is slower and more variable than the cell-culture volume (\texttt{jrc\_hela-2}).}
+\label{fig:b1_latency}
+\end{figure}
 
 \paragraph{Future sweeps.} The full sweep promised here --- chunk sizes $\{64^3, 128^3, 256^3\}$ $\times$ three model sizes (small UNet $\sim$1M params, medium $\sim$10M, large $\sim$50M) $\times$ \{H100, A100, V100, CPU\} --- remains to be executed. The first-pass results above establish the medium-cell of that grid.
 
@@ -50,7 +57,14 @@ B10 & Long-running stability (24~h server, real workload) & failure rate, drift 
 
 \paragraph{Protocol.} Run on both \texttt{jrc\_hela-2} (cell culture) and \texttt{jrc\_mus-liver} (tissue) with the same model. Run \texttt{cellmap\_flow\_blockwise} with worker counts $N \in \{1, 4, 16, 64, 128\}$ on the LSF cluster. Hold all other parameters fixed within each dataset. Report wall time, speedup relative to $N=1$, parallel efficiency, and number of Daisy retries. Plot the scaling curve per dataset and fit Amdahl's-law parameters; comparing the two curves separates dataset-specific effects (chunk-content variance, S3 read patterns) from the framework's intrinsic scaling behaviour.
 
-\paragraph{First-pass results.} On \texttt{jrc\_hela-2}, processing a fixed $8192^3$~nm sub-volume ($\sim$6{,}900 output blocks at the model's $56^3$ write size) with \texttt{cellmap\_flow\_blockwise} dispatching $N$ single-GPU H100 workers via Daisy, wall time drops from 1292~s ($N{=}1$) to 401~s ($N{=}4$) to 268~s ($N{=}16$) (Tab.~\ref{tab:b3_results}). Scaling is near-linear through $N{=}4$ (parallel efficiency 0.80) and then flattens (0.30 at $N{=}16$): once per-worker fixed costs (LSF dispatch, GPU allocation, model load) become comparable to each worker's shrinking share of compute, additional workers buy little. This is the expected signature of a fixed serial overhead per worker, and it locates the practical worker count for a sub-volume of this size. The full $N \in \{1,4,16,64,128\}$ sweep and the \texttt{jrc\_mus-liver} counterpart (which isolates I/O and chunk-content effects) remain to be run.
+\paragraph{First-pass results.} On \texttt{jrc\_hela-2}, processing a fixed $8192^3$~nm sub-volume ($\sim$6{,}900 output blocks at the model's $56^3$ write size) with \texttt{cellmap\_flow\_blockwise} dispatching $N$ single-GPU H100 workers via Daisy, wall time drops from 1292~s ($N{=}1$) to 401~s ($N{=}4$) to 268~s ($N{=}16$) (Tab.~\ref{tab:b3_results}). Scaling is near-linear through $N{=}4$ (parallel efficiency 0.80) and then flattens (0.30 at $N{=}16$): once per-worker fixed costs (LSF dispatch, GPU allocation, model load) become comparable to each worker's shrinking share of compute, additional workers buy little (Fig.~\ref{fig:b3_scaling}). This is the expected signature of a fixed serial overhead per worker, and it locates the practical worker count for a sub-volume of this size.
+
+\begin{figure}[tbhp]
+\centering
+\includegraphics[width=\linewidth]{b3_scaling}
+\caption{B3 cluster strong scaling on a fixed $8192^3$~nm sub-volume, with \texttt{cellmap\_flow\_blockwise} dispatching $N$ single-GPU H100 workers via Daisy. Left: wall time vs.\ worker count (log--log; dashed line is ideal linear scaling from $N{=}1$). Right: parallel efficiency. Scaling tracks the ideal through $N{=}4$, then departs as per-worker fixed costs (scheduler dispatch, GPU allocation, model load) come to dominate each worker's shrinking compute share.}
+\label{fig:b3_scaling}
+\end{figure}
 
 \paragraph{Expected outcome.} An empirical estimate of the framework's serial overhead (Daisy scheduling, file-system contention) and the practical maximum useful worker count for a given dataset size.
 
