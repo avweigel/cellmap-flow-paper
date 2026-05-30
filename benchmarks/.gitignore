@@ -2,6 +2,7 @@
 */results/lsf_*.log
 */results/lsf_*.err
 */results/*.server.log
+*/results/**/orchestrator.log
 */_configs/
 __pycache__/
 *.pyc
