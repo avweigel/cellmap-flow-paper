@@ -1,27 +1,27 @@
 \section{Benchmarks}
 \label{sec:benchmarks}
 
-A software paper for an inference framework needs evidence that the framework is fast enough to be useful and that its scaling behaviour is well-characterised. We propose a benchmark suite covering interactive latency, blockwise throughput, cluster scaling, memory efficiency, comparison against a hand-rolled baseline, and the cost of optional features (multi-model fusion, half-precision, alternative I/O backends). The full set is summarised in Table~\ref{tab:benchmarks}; the rest of this section describes each benchmark in enough detail to be reproducible.
+A software paper for an inference framework needs evidence that the framework is fast enough to be useful and that its scaling behaviour is well-characterised. Rather than report a handful of ad-hoc timings, we define a standardised ten-experiment benchmark suite for on-demand volumetric inference, spanning interactive latency, blockwise throughput, cluster scaling (strong and weak), memory efficiency, comparison against a hand-rolled baseline, and the cost of optional features (multi-model fusion, half-precision, alternative I/O backends, model-format adapters, and long-running stability). The full suite is summarised in Table~\ref{tab:benchmarks}. We execute three of the ten here --- B1, B3, and B6, the smallest set that establishes the core claims: interactive use is fast enough to be useful, whole-volume use scales out on a cluster, and the end-to-end story improves on the hand-rolled workflow it replaces. The remaining seven are specified as fully detailed, reproducible protocols so that they can be run on other hardware and datasets and contributed back. Each benchmark below is described in enough detail to be reproduced independently.
 
 \begin{table*}[tbhp]
 \centering
-\caption{Proposed benchmark suite for \cellmapflow{}. ``Status'' marks which experiments are completed for this manuscript; remaining entries are described as protocols.}
+\caption{Standardised benchmark suite for on-demand volumetric inference. ``Status'' marks the three experiments executed in this manuscript, each with a pointer to its results table; the remaining seven are specified as reproducible protocols in the text.}
 \label{tab:benchmarks}
 \small
 \begin{tabularx}{\textwidth}{l X l l}
 \toprule
 \textbf{ID} & \textbf{Question} & \textbf{Primary metric} & \textbf{Status} \\
 \midrule
-B1 & Interactive chunk latency vs.\ chunk size and model & ms / chunk (median, p99) & done (Tab.~\ref{tab:b1_results}) \\
-B2 & Blockwise throughput on a single GPU & GVox/s & TODO \\
-B3 & Strong scaling on cluster (fixed volume, varying GPUs) & speedup vs.\ ideal & done (Tab.~\ref{tab:b3_results}) \\
-B4 & Weak scaling on cluster (fixed work per GPU) & efficiency & TODO \\
-B5 & Memory footprint vs.\ chunk size (with/without FP16) & peak GPU/CPU MB & TODO \\
-B6 & Comparison vs.\ hand-rolled PyTorch + offline export & end-to-end wall time & partial (Tab.~\ref{tab:b6_results}) \\
-B7 & Multi-model fusion overhead (1 vs.\ 2 vs.\ 3 models) & relative latency & TODO \\
-B8 & I/O backend comparison (Zarr / N5 / OME-Zarr / S3 / precomputed) & read latency & TODO \\
-B9 & Model-format adapter cost (TorchScript / DaCapo / BioImage.io / HuggingFace) & load + first-chunk time & TODO \\
-B10 & Long-running stability (24~h server, real workload) & failure rate, drift & TODO \\
+B1 & Interactive chunk latency vs.\ chunk size and model & ms / chunk (median, p99) & executed (Tab.~\ref{tab:b1_results}) \\
+B2 & Blockwise throughput on a single GPU & GVox/s & protocol \\
+B3 & Strong scaling on cluster (fixed volume, varying GPUs) & speedup vs.\ ideal & executed (Tab.~\ref{tab:b3_results}) \\
+B4 & Weak scaling on cluster (fixed work per GPU) & efficiency & protocol \\
+B5 & Memory footprint vs.\ chunk size (with/without FP16) & peak GPU/CPU MB & protocol \\
+B6 & Comparison vs.\ hand-rolled PyTorch + offline export & end-to-end wall time & executed, partial (Tab.~\ref{tab:b6_results}) \\
+B7 & Multi-model fusion overhead (1 vs.\ 2 vs.\ 3 models) & relative latency & protocol \\
+B8 & I/O backend comparison (Zarr / N5 / OME-Zarr / S3 / precomputed) & read latency & protocol \\
+B9 & Model-format adapter cost (TorchScript / DaCapo / BioImage.io / HuggingFace) & load + first-chunk time & protocol \\
+B10 & Long-running stability (24~h server, real workload) & failure rate, drift & protocol \\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -133,7 +133,7 @@ Measure two end-to-end metrics: (a) \emph{time to first interactive view} (from 
 
 \subsection*{Recommended order of execution}
 
-If the full ten-experiment suite is impractical to run before submission, the smallest set that still tells a coherent story is \textbf{B1, B3, and B6}: B1 establishes that interactive use is fast enough to be useful; B3 establishes that whole-volume use scales out; B6 establishes that the framework's end-to-end story beats the baseline it replaces. B5 (memory) and B9 (model-format adapter cost) are quick to add once the harness from B1 exists. B7 and B8 are most valuable as supporting evidence in the discussion. B4, B10 are nice-to-have for production-readiness claims.
+The suite is designed to be run incrementally, and we suggest an order for extending beyond the three experiments executed here. The core \textbf{B1, B3, and B6} come first: B1 establishes that interactive use is fast enough to be useful; B3 establishes that whole-volume use scales out; B6 establishes that the framework's end-to-end story beats the baseline it replaces. B5 (memory) and B9 (model-format adapter cost) are quick to add once the harness from B1 exists. B7 and B8 are most valuable as supporting evidence for the discussion. B4 and B10 are the most involved and chiefly strengthen production-readiness claims.
 
 \subsection*{Reporting and reproducibility}
 
