@@ -162,46 +162,101 @@ def render_b3(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _b6_dataset(row: dict) -> str:
+    """Dataset label for a B6 result row: the explicit `dataset` field if the run
+    recorded one, else the `dataset`/`data_path` of its shared config, else
+    'unknown'. The config fallback keeps older result files -- written before the
+    field existed -- grouping correctly."""
+    ds = row.get("dataset")
+    if ds:
+        return ds
+    cfg_path = row.get("config")
+    if cfg_path:
+        try:
+            import re  # noqa: PLC0415
+            import yaml  # noqa: PLC0415
+            cfg = yaml.safe_load(Path(cfg_path).read_text())
+            if cfg.get("dataset"):
+                return cfg["dataset"]
+            m = re.search(r"jrc[_-][A-Za-z0-9-]+", str(cfg.get("data_path", "")))
+            if m:
+                return m.group(0)
+        except Exception:
+            pass
+    return "unknown"
+
+
 def render_b6(rows: list[dict]) -> str:
     if not rows:
         return "% B6: no results yet\n"
-    # run_baseline.py emits two rows, both variant="baseline", distinguished by
-    # the `first_view_only` flag; run_cellmapflow.py emits one variant="cellmapflow".
-    baselines = [r for r in rows if r.get("variant") == "baseline"]
-    bl_first = next((r for r in baselines if r.get("first_view_only")), None)
-    bl_full = next((r for r in baselines if not r.get("first_view_only")), None)
-    cf = next((r for r in rows if r.get("variant") == "cellmapflow"), None)
-    missing = [
-        name
-        for name, row in [
-            ("baseline first-view", bl_first),
-            ("baseline full-volume", bl_full),
-            ("cellmapflow", cf),
-        ]
-        if row is None
-    ]
-    if missing:
-        return f"% B6: missing runs to render: {', '.join(missing)}\n"
-    bl_loc, cf_loc = _b6_user_loc(cf)
-    bl_loc = bl_loc if bl_loc is not None else bl_full.get("lines_of_code", 0)
-    cf_loc = cf_loc if cf_loc is not None else cf.get("lines_of_code_total", 0)
+    # Group by dataset. Within a dataset: run_baseline.py emits two baseline rows
+    # (first_view_only True/False); run_cellmapflow.py emits one cellmapflow row
+    # per blockwise worker count. The worker-count axis is what exposes the
+    # completion-time crossover (single-process baseline vs. cellmap-flow at N>1).
+    by_ds: dict[str, dict] = defaultdict(
+        lambda: {"bl_first": None, "bl_full": None, "cf": {}}
+    )
+    for r in rows:
+        bucket = by_ds[_b6_dataset(r)]
+        if r.get("variant") == "baseline":
+            key = "bl_first" if r.get("first_view_only") else "bl_full"
+            bucket[key] = r
+        elif r.get("variant") == "cellmapflow":
+            bucket["cf"][int(r.get("workers", 1) or 1)] = r
+
+    def _fmt(v) -> str:
+        return f"{v:.1f}" if isinstance(v, (int, float)) else "---"
+
+    body = []
+    datasets = sorted(by_ds)
+    for di, ds in enumerate(datasets):
+        b = by_ds[ds]
+        ds_tex = _esc(ds)
+        any_cf = next((b["cf"][n] for n in sorted(b["cf"])), None)
+        bl_loc, cf_loc = _b6_user_loc(any_cf) if any_cf else (None, None)
+        if bl_loc is None and b["bl_full"]:
+            bl_loc = b["bl_full"].get("lines_of_code")
+        if cf_loc is None and any_cf:
+            cf_loc = any_cf.get("lines_of_code_total")
+
+        if b["bl_first"] or b["bl_full"]:
+            fv = _fmt(b["bl_first"].get("wall_time_s")) if b["bl_first"] else "---"
+            full = _fmt(b["bl_full"].get("wall_time_s")) if b["bl_full"] else "---"
+            body.append(
+                f"Hand-rolled PyTorch baseline & {ds_tex} & {fv} & {full} & "
+                f"{bl_loc if bl_loc is not None else '---'} \\\\"
+            )
+        multi = len(b["cf"]) > 1
+        for i, n in enumerate(sorted(b["cf"])):
+            cf = b["cf"][n]
+            label = f"\\cellmapflow{{}} ($N{{=}}{n}$)" if multi else "\\cellmapflow{}"
+            # first-view is a worker-independent single-chunk response; show it
+            # only against the first (smallest-N) row so it is not double-counted.
+            fv = _fmt(cf.get("time_to_first_view_s")) if i == 0 else "---"
+            full = _fmt(cf.get("time_to_completion_s"))
+            body.append(
+                f"{label} & {ds_tex} & {fv} & {full} & "
+                f"{cf_loc if cf_loc is not None else '---'} \\\\"
+            )
+        if di != len(datasets) - 1:
+            body.append("\\midrule")
+
     lines = [
         "\\begin{table*}[tbhp]",
         "\\centering",
         "\\caption{B6 \\cellmapflow{} vs.\\ a hand-rolled PyTorch baseline on the "
-        "same task and the same single H100. Times in seconds; user LoC is the "
-        "hand-written inference script vs.\\ the cellmap-flow YAML config plus its "
-        "CLI invocation.}",
+        "same task, model, and hardware (one H100 per worker). Times in seconds; "
+        "user LoC is the hand-written inference script vs.\\ the cellmap-flow YAML "
+        "config plus its CLI invocation. For cellmap-flow, $N$ is the number of "
+        "blockwise workers; the single-process baseline cannot scale out. "
+        "First-view is a single-chunk server response and is worker-independent.}",
         "\\label{tab:b6_results}",
         "\\small",
-        "\\begin{tabular}{lrrr}",
+        "\\begin{tabular}{llrrr}",
         "\\toprule",
-        "Pipeline & first-view (s) & full-volume (s) & user LoC \\\\",
+        "Pipeline & Dataset & first-view (s) & full-volume (s) & user LoC \\\\",
         "\\midrule",
-        f"Hand-rolled PyTorch baseline & {bl_first.get('wall_time_s', 0):.1f} & "
-        f"{bl_full.get('wall_time_s', 0):.1f} & {bl_loc} \\\\",
-        f"\\cellmapflow{{}} & {cf.get('time_to_first_view_s', 0):.1f} & "
-        f"{cf.get('time_to_completion_s', 0):.1f} & {cf_loc} \\\\",
+        *body,
         "\\bottomrule",
         "\\end{tabular}",
         "\\end{table*}",

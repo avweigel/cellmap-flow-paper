@@ -44,15 +44,15 @@ jrc\_mus-liver & 1 & 1669.4 & 1.00$\times$ & 1.00 \\
 % --- b6_baseline_comparison ---
 \begin{table*}[tbhp]
 \centering
-\caption{B6 \cellmapflow{} vs.\ a hand-rolled PyTorch baseline on the same task and the same single H100. Times in seconds; user LoC is the hand-written inference script vs.\ the cellmap-flow YAML config plus its CLI invocation.}
+\caption{B6 \cellmapflow{} vs.\ a hand-rolled PyTorch baseline on the same task, model, and hardware (one H100 per worker). Times in seconds; user LoC is the hand-written inference script vs.\ the cellmap-flow YAML config plus its CLI invocation. For cellmap-flow, $N$ is the number of blockwise workers; the single-process baseline cannot scale out. First-view is a single-chunk server response and is worker-independent.}
 \label{tab:b6_results}
 \small
-\begin{tabular}{lrrr}
+\begin{tabular}{llrrr}
 \toprule
-Pipeline & first-view (s) & full-volume (s) & user LoC \\
+Pipeline & Dataset & first-view (s) & full-volume (s) & user LoC \\
 \midrule
-Hand-rolled PyTorch baseline & 6.7 & 79.6 & 113 \\
-\cellmapflow{} & 6.9 & 214.1 & 16 \\
+Hand-rolled PyTorch baseline & jrc\_hela-2 & 6.7 & 79.6 & 114 \\
+\cellmapflow{} & jrc\_hela-2 & 6.9 & 214.1 & 16 \\
 \bottomrule
 \end{tabular}
 \end{table*}

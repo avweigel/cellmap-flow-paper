@@ -161,30 +161,33 @@ m = CellmapModel("cellmap/fly_organelles_run07_700000")
 torch.jit.script(m.model).save("/path/to/cellmap_flow_paper/benchmarks/b6_baseline_comparison/fly_organelles_run07_700000.ts")
 ```
 
-Once you have a TorchScript file:
+Once you have a TorchScript file, set `model_checkpoint` to its path in **both** shared configs (the same export drives both datasets):
 
-1. Open [configs/template.yaml](b6_baseline_comparison/configs/template.yaml) and set `model_checkpoint` to the `.ts` path. It is otherwise pre-filled for jrc\_hela-2 + fly\_organelles.
-   - **Calibrate the baseline chunking:** `chunk_shape + 2*context` must be a valid input size for the model (the fly U-Net wants a 178³ input at 8 nm). If the hand-rolled run errors on a shape mismatch, this is why — adjust `chunk_shape`/`context` to a size the exported model accepts.
-   - **Keep the regions aligned:** the baseline `full_volume_roi_shape` (voxels of s1) and the bounding box in [configs/cf_blockwise_jrc_hela-2.yaml](b6_baseline_comparison/configs/cf_blockwise_jrc_hela-2.yaml) (nanometers) must cover the same physical sub-volume so the completion timings are comparable. Defaults already match (512 voxels × 8 nm = 4096 nm).
+1. **Two datasets, one geometry.** B6 runs on a cell-culture and a tissue volume, exactly like B1/B3:
+   - [configs/template.yaml](b6_baseline_comparison/configs/template.yaml) — jrc\_hela-2; blockwise [configs/cf_blockwise_jrc_hela-2.yaml](b6_baseline_comparison/configs/cf_blockwise_jrc_hela-2.yaml).
+   - [configs/template_jrc_mus-liver.yaml](b6_baseline_comparison/configs/template_jrc_mus-liver.yaml) — jrc\_mus-liver; blockwise [configs/cf_blockwise_jrc_mus-liver.yaml](b6_baseline_comparison/configs/cf_blockwise_jrc_mus-liver.yaml).
+   - Each config carries a `dataset:` label that tags its result JSON, so the aggregator groups the two datasets into separate table blocks automatically.
+   - **Calibrate the baseline chunking:** `output_block_shape + 2*context` must be a valid input size for the model (the fly U-Net wants a 178³ input at 8 nm ⇒ 56³ output, context 61/side). If the hand-rolled run errors on a shape mismatch, this is why. Both configs are pre-filled with these.
+   - **Keep the regions aligned:** the baseline `full_volume_roi_shape` (s1 voxels) and the blockwise `bounding_boxes` (nm) must cover the same sub-volume. Defaults already match (512 voxels × 8 nm = 4096 nm) and are identical across both datasets so their numbers are comparable.
    - The cellmap-flow first-view server is launched by `run_cellmapflow.py` itself as `cellmap_flow_server huggingface --repo <hf_repo> -d <data_path> -p <port>` (the same entrypoint as B1); no separate server YAML is needed.
-2. Run (the two baseline invocations must write the two distinct filenames below — the aggregator distinguishes first-view from full-volume by the `first_view_only` flag, so don't collapse them into one file):
+2. **Run both datasets.** The baseline writes two distinct filenames per dataset — the aggregator distinguishes first-view from full-volume by the `first_view_only` flag, so don't collapse them. `run_cellmapflow.py` measures time-to-first-view once and then sweeps the blockwise completion over `--workers` (one result JSON per count, dataset-tagged); the **N>1 points are what show the completion-time crossover** against the single-process baseline:
   ```sh
-  # baseline, full-volume completion
-  python -m benchmarks.b6_baseline_comparison.run_baseline \
-      --config benchmarks/b6_baseline_comparison/configs/template.yaml \
-      --output benchmarks/b6_baseline_comparison/results/baseline_full.json
+  for CFG in template template_jrc_mus-liver; do
+    C=benchmarks/b6_baseline_comparison/configs/$CFG.yaml
+    R=benchmarks/b6_baseline_comparison/results
 
-  # baseline, first-view-only (time-to-first-view)
-  python -m benchmarks.b6_baseline_comparison.run_baseline \
-      --config benchmarks/b6_baseline_comparison/configs/template.yaml \
-      --first-view-only \
-      --output benchmarks/b6_baseline_comparison/results/baseline_first_view.json
+    # baseline: full-volume completion, then first-view-only
+    python -m benchmarks.b6_baseline_comparison.run_baseline \
+        --config $C --output $R/baseline_${CFG}_full.json
+    python -m benchmarks.b6_baseline_comparison.run_baseline \
+        --config $C --first-view-only --output $R/baseline_${CFG}_first_view.json
 
-  # cellmap-flow: launches the server (first-view) then blockwise (completion)
-  python -m benchmarks.b6_baseline_comparison.run_cellmapflow \
-      --config benchmarks/b6_baseline_comparison/configs/template.yaml \
-      --output benchmarks/b6_baseline_comparison/results/cellmapflow.json
+    # cellmap-flow: first-view once + blockwise completion swept over N workers
+    python -m benchmarks.b6_baseline_comparison.run_cellmapflow \
+        --config $C --output-dir $R --workers 1 4 16
+  done
   ```
+  Delete the pre-existing single-dataset result files (`baseline_full.json`, `baseline_first_view.json`, `cellmapflow.json`) once the dataset-tagged runs exist — the aggregator reads *every* `results/*.json`, so leaving the old untagged pair in place would double-count jrc\_hela-2.
 
 ---
 

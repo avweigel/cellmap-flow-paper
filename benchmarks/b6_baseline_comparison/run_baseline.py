@@ -115,6 +115,7 @@ def main() -> int:
     payload = {
         "benchmark": "b6_baseline_comparison",
         "variant": "baseline",
+        "dataset": cfg.get("dataset"),
         "first_view_only": args.first_view_only,
         "wall_time_s": wall,
         "n_blocks": n_blocks,
