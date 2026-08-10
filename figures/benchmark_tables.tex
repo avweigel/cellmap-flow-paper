@@ -51,8 +51,15 @@ jrc\_mus-liver & 1 & 1669.4 & 1.00$\times$ & 1.00 \\
 \toprule
 Pipeline & Dataset & first-view (s) & full-volume (s) & user LoC \\
 \midrule
-Hand-rolled PyTorch baseline & jrc\_hela-2 & 6.7 & 79.6 & 114 \\
-\cellmapflow{} & jrc\_hela-2 & 6.9 & 214.1 & 16 \\
+Hand-rolled PyTorch baseline & jrc\_hela-2 & 7.2 & 607.8 & 114 \\
+\cellmapflow{} ($N{=}1$) & jrc\_hela-2 & 15.5 & 1324.2 & 16 \\
+\cellmapflow{} ($N{=}4$) & jrc\_hela-2 & --- & 344.4 & 16 \\
+\cellmapflow{} ($N{=}16$) & jrc\_hela-2 & --- & 122.5 & 16 \\
+\midrule
+Hand-rolled PyTorch baseline & jrc\_mus-liver & 16.9 & 790.3 & 114 \\
+\cellmapflow{} ($N{=}1$) & jrc\_mus-liver & 7.1 & 1691.2 & 16 \\
+\cellmapflow{} ($N{=}4$) & jrc\_mus-liver & --- & 456.8 & 16 \\
+\cellmapflow{} ($N{=}16$) & jrc\_mus-liver & --- & 135.4 & 16 \\
 \bottomrule
 \end{tabular}
 \end{table*}

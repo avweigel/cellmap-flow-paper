@@ -5,7 +5,7 @@
 # Keep this bounding box covering the SAME physical region as the baseline's
 # full_volume ROI in template.yaml: offset/shape here are in WORLD units (nm)
 # and snap to the 8 nm output grid; the baseline's are in s1 voxels (~8 nm).
-# 512 voxels * 8 nm == 4096 nm.
+# 1024 voxels * 8 nm == 8192 nm (same sub-volume as B3).
 
 data_path: "/nrs/cellmap/data/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1"
 charge_group: "cellmap"
@@ -16,17 +16,17 @@ models:
     type: huggingface
     repo: cellmap/fly_organelles_run07_700000
 
-output_path: "/nrs/cellmap/weigela/b6/cellmapflow_full.zarr/s1"
+output_path: "/nrs/cellmap/weigela/b6/cellmapflow_8192_full.zarr/s1"
 task_name: "b6_cellmapflow_jrc_hela-2_fly_organelles"
 workers: 1
 
 # Mandatory in the installed cellmap-flow: blockwise tracks block progress here.
 # Use a fresh tmp_dir for a clean full run (delete it between repeats).
-tmp_dir: "/nrs/cellmap/weigela/b6/tmp/cellmapflow_jrc_hela-2"
+tmp_dir: "/nrs/cellmap/weigela/b6/tmp/cellmapflow_jrc_hela-2_8192"
 
 # Limit to one sub-volume (nanometers). separate_bounding_boxes_zarrs sizes the
 # output array to the box rather than the whole dataset.
 bounding_boxes:
   - offset: [0, 0, 0]
-    shape: [4096, 4096, 4096]
+    shape: [8192, 8192, 8192]
 separate_bounding_boxes_zarrs: true

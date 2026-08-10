@@ -1,9 +1,11 @@
 {
-  "timestamp": "2026-05-30T20:34:04.799804+00:00",
+  "timestamp": "2026-08-10T18:06:29.809775+00:00",
   "benchmark": "b6_baseline_comparison",
   "variant": "cellmapflow",
-  "time_to_first_view_s": 6.865225557005033,
-  "time_to_completion_s": 214.0989870580088,
+  "dataset": "jrc_hela-2",
+  "workers": 1,
+  "time_to_first_view_s": 15.485227428027429,
+  "time_to_completion_s": 1324.2239243399817,
   "blockwise_return_code": 0,
   "server_argv": [
     "cellmap_flow_server",
@@ -13,13 +15,14 @@
     "-d",
     "/nrs/cellmap/data/jrc_hela-2/jrc_hela-2.zarr/recon-1/em/fibsem-uint8/s1",
     "-p",
-    "45009"
+    "37483"
   ],
-  "chunk_url": "http://127.0.0.1:45009/data/s1/0.0.0",
+  "chunk_url": "http://127.0.0.1:37483/data/s1/0.0.0",
   "config": "benchmarks/b6_baseline_comparison/configs/template.yaml",
-  "lines_of_code_total": 146,
+  "blockwise_config_used": "benchmarks/b6_baseline_comparison/results/_configs/cf_blockwise_jrc_hela-2_n0001.yaml",
+  "lines_of_code_total": 209,
   "env": {
-    "hostname": "h12u08.int.janelia.org",
+    "hostname": "h13u24.int.janelia.org",
     "platform": "Linux-5.14.0-687.10.1.el9_8.x86_64-x86_64-with-glibc2.34",
     "python": "3.11.15",
     "git_sha": "d9e35f9986ac575501b73a9a3517acffa60f138c",

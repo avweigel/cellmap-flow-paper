@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-08-10T19:06:12.017275+00:00",
+  "benchmark": "b6_baseline_comparison",
+  "variant": "cellmapflow",
+  "dataset": "jrc_mus-liver",
+  "workers": 16,
+  "time_to_first_view_s": null,
+  "time_to_completion_s": 135.4375161700882,
+  "blockwise_return_code": 0,
+  "server_argv": [
+    "cellmap_flow_server",
+    "huggingface",
+    "--repo",
+    "cellmap/fly_organelles_run07_700000",
+    "-d",
+    "/nrs/cellmap/data/jrc_mus-liver/jrc_mus-liver.zarr/recon-1/em/fibsem-uint8/s1",
+    "-p",
+    "63399"
+  ],
+  "chunk_url": "http://127.0.0.1:63399/data/s1/0.0.0",
+  "config": "benchmarks/b6_baseline_comparison/configs/template_jrc_mus-liver.yaml",
+  "blockwise_config_used": "benchmarks/b6_baseline_comparison/results/_configs/cf_blockwise_jrc_mus-liver_n0016.yaml",
+  "lines_of_code_total": 209,
+  "env": {
+    "hostname": "h13u24.int.janelia.org",
+    "platform": "Linux-5.14.0-687.10.1.el9_8.x86_64-x86_64-with-glibc2.34",
+    "python": "3.11.15",
+    "git_sha": "d9e35f9986ac575501b73a9a3517acffa60f138c",
+    "gpu": {
+      "available": true,
+      "name": "NVIDIA H100 80GB HBM3",
+      "count": 1
+    },
+    "packages": {
+      "cellmap-flow": "0.2.3",
+      "torch": "2.11.0",
+      "numpy": "2.4.4",
+      "zarr": "2.18.4",
+      "tensorstore": "0.1.82",
+      "daisy": "1.2.2",
+      "neuroglancer": "2.41.2"
+    }
+  }
+}

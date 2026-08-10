@@ -37,11 +37,12 @@ first_view_roi_shape:  [256, 256, 256]
 first_view_output_path: "/nrs/cellmap/weigela/b6/mus-liver_baseline_first_view.zarr"
 
 # Full-volume ROI (baseline): one contiguous sub-volume, in VOXELS of s1.
-# 512^3 voxels at ~8 nm == 4096 nm/side; matches the blockwise bbox below and
-# the jrc_hela-2 config so the two datasets do equal work.
+# 1024^3 voxels at ~8 nm == 8192 nm/side; matches the blockwise bbox below, the
+# jrc_hela-2 config, and B3's strong-scaling sub-volume, so the two datasets do
+# equal work and B6 shares B3's region.
 full_volume_roi_offset: [0, 0, 0]
-full_volume_roi_shape:  [512, 512, 512]
-output_path: "/nrs/cellmap/weigela/b6/mus-liver_baseline_full.zarr"
+full_volume_roi_shape:  [1024, 1024, 1024]
+output_path: "/nrs/cellmap/weigela/b6/mus-liver_baseline_8192_full.zarr"
 
 # --- cellmap-flow first-view (run_cellmapflow.py launches the server) ---
 cf_model_type: "huggingface"
